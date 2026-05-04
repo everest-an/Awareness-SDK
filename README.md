@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="assets/awareness-wordmark.svg" alt="Awareness SDK — Persistent Memory for AI Agents" width="760"/>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/awareness-wordmark-dark.svg"/>
+    <img src="assets/awareness-wordmark.svg" alt="Awareness SDK — Persistent Memory for AI Agents" width="760"/>
+  </picture>
 </p>
 
 <p align="center">
