@@ -1,19 +1,24 @@
 <p align="center">
+  <img src="assets/awareness-wordmark.svg" alt="Awareness SDK — Persistent Memory for AI Agents" width="760"/>
+</p>
+
+<p align="center">
   <img src="assets/local-20s.gif" alt="Awareness — Long-Term Memory for AI Agents" width="100%"/>
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/awareness-memory-cloud/"><img src="https://img.shields.io/pypi/v/awareness-memory-cloud?color=00d4ff&label=PyPI" alt="PyPI"/></a>
-  <a href="https://www.npmjs.com/package/@awareness-sdk/memory-cloud"><img src="https://img.shields.io/npm/v/@awareness-sdk/memory-cloud?color=7b68ee&label=npm" alt="npm"/></a>
-  <a href="https://www.npmjs.com/package/@awareness-sdk/local"><img src="https://img.shields.io/npm/v/@awareness-sdk/local?color=22c55e&label=local" alt="local"/></a>
-  <a href="https://awareness.market"><img src="https://img.shields.io/badge/Cloud-awareness.market-5ce0d2" alt="Cloud"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue" alt="License"/></a>
-  <a href="https://discord.com/invite/nMDrT538Qa"><img src="https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord" alt="Discord"/></a>
+  <a href="https://awareness.market/"><img src="https://img.shields.io/badge/Website-awareness.market-0EA5E9?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website"/></a>
+  <a href="https://awareness.market/docs"><img src="https://img.shields.io/badge/Docs-awareness.market%2Fdocs-14B8A6?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Docs"/></a>
+  <a href="https://pypi.org/project/awareness-memory-cloud/"><img src="https://img.shields.io/badge/PyPI-awareness--memory--cloud-00D4FF?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI"/></a>
+  <a href="https://www.npmjs.com/package/@awareness-sdk/memory-cloud"><img src="https://img.shields.io/badge/npm-memory--cloud-7B68EE?style=for-the-badge&logo=npm&logoColor=white" alt="npm memory cloud"/></a>
+  <a href="https://www.npmjs.com/package/@awareness-sdk/local"><img src="https://img.shields.io/badge/npm-local-22C55E?style=for-the-badge&logo=npm&logoColor=white" alt="npm local"/></a>
+  <a href="https://discord.com/invite/nMDrT538Qa"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-2563EB?style=for-the-badge" alt="License Apache 2.0"/></a>
 </p>
 
 <p align="center">
   <strong>Give your AI agent persistent memory across sessions.</strong><br/>
-  Local-first. Works offline. One command to set up. 13+ IDE support.<br/>
+  Local-first MCP memory platform for AI coding agents, SDK apps, and production workflows.<br/>
   <a href="https://awareness.market/docs">Docs</a> · <a href="https://awareness.market">Cloud</a> · <a href="https://discord.com/invite/nMDrT538Qa">Discord</a> · <a href="#quick-start">Quick Start</a>
 </p>
 
