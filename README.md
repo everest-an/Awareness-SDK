@@ -25,6 +25,31 @@
   <a href="https://awareness.market/docs">Docs</a> · <a href="https://awareness.market">Cloud</a> · <a href="https://discord.com/invite/nMDrT538Qa">Discord</a> · <a href="#quick-start">Quick Start</a>
 </p>
 
+Awareness SDK is a local-first memory layer for AI agents and AI coding workflows. It provides persistent memory, cross-session recall, hybrid retrieval, and easy integration through MCP, Python, and TypeScript SDKs.
+
+## Quick Navigation
+
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Packages](#packages)
+- [Integrations](#integrations)
+- [Environment Variables](#environment-variables)
+- [FAQ](#faq)
+
+## FAQ
+
+### Does it work offline?
+
+Yes. Local mode runs fully on your machine.
+
+### Is cloud required?
+
+No. Cloud features are optional.
+
+### How do I add memory to an existing app?
+
+Use `AwarenessInterceptor.wrap_openai()` / `wrap_anthropic()` (Python) or `wrapOpenAI()` / `wrapAnthropic()` (TypeScript).
+
 ---
 
 ## Why Awareness?
