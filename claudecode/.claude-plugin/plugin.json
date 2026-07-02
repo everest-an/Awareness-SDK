@@ -7,7 +7,7 @@
     "url": "https://awareness.market"
   },
   "homepage": "https://awareness.market/docs?doc=ide-plugins",
-  "repository": "https://github.com/edwin-hao-ai/Awareness-SDK",
+  "repository": "https://github.com/everest-an/Awareness-SDK",
   "license": "Apache-2.0",
   "keywords": ["memory", "context", "persistence", "awareness", "recall"],
   "skills": "./skills/",

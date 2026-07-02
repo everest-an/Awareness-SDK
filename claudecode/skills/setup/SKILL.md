@@ -346,7 +346,7 @@ Verify it exists:
 [ -f "${CLAUDE_SKILL_DIR}/../../settings.json" ] && echo "SETTINGS_PATH:${CLAUDE_SKILL_DIR}/../../settings.json" || echo "SETTINGS_PATH:NOT_FOUND"
 ```
 
-- If `SETTINGS_PATH:NOT_FOUND` → tell user: "Could not find plugin settings. Make sure the plugin is installed: `/plugin marketplace add edwin-hao-ai/Awareness-SDK` then `/plugin install awareness-memory@awareness`". Stop here.
+- If `SETTINGS_PATH:NOT_FOUND` → tell user: "Could not find plugin settings. Make sure the plugin is installed: `/plugin marketplace add everest-an/Awareness-SDK` then `/plugin install awareness-memory@awareness`". Stop here.
 - Otherwise → use the returned path.
 
 ### 5b. Write credentials

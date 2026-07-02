@@ -8,7 +8,7 @@ Online docs: <https://awareness.market/docs?doc=openclaw>
 
 ## Benchmark: LongMemEval (ICLR 2025)
 
-Awareness Memory achieves **95.6% Recall@5** on [LongMemEval](https://arxiv.org/abs/2410.10813) (ICLR 2025) — 500 human-curated questions, zero LLM calls, hybrid BM25+Vector retrieval. [Full results →](https://github.com/edwin-hao-ai/Awareness/tree/main/benchmarks/longmemeval)
+Awareness Memory achieves **95.6% Recall@5** on [LongMemEval](https://arxiv.org/abs/2410.10813) (ICLR 2025) — 500 human-curated questions, zero LLM calls, hybrid BM25+Vector retrieval. [Full results →](https://github.com/everest-an/Awareness/tree/main/benchmarks/longmemeval)
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
@@ -181,7 +181,7 @@ Most memory systems pick one extraction strategy. Awareness combines them:
 - **Zero-LLM backend** — all extraction runs on the agent's LLM. The backend is a coordinator + storage layer; no inference costs pass through to you.
 - **One memory, many clients** — same daemon reachable via Claude Code skills, OpenClaw plugin, npm / pip / ClawHub, and a plain MCP server. Install any one surface and the rest just work against the same memory.
 
-See [`docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md`](https://github.com/edwin-hao-ai/Awareness/blob/main/docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md) for the honest side-by-side against MemPalace (96.6% R@5 via raw verbatim storage) — what we'd adopt from their approach and what we keep from ours.
+See [`docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md`](https://github.com/everest-an/Awareness/blob/main/docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md) for the honest side-by-side against MemPalace (96.6% R@5 via raw verbatim storage) — what we'd adopt from their approach and what we keep from ours.
 
 ## License
 

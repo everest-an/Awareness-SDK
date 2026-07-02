@@ -32,7 +32,7 @@ This skill communicates with an external API to provide memory functionality:
 - **Local mode**: If you run a local daemon (`localhost:37800`), all data stays on your machine — nothing is sent externally.
 - **No secrets captured**: The skill never reads, stores, or transmits file contents, environment variables, or credentials from your system beyond its own API key.
 
-You can review the scripts in this skill folder before use. Source code: https://github.com/edwin-hao-ai/Awareness-SDK
+You can review the scripts in this skill folder before use. Source code: https://github.com/everest-an/Awareness-SDK
 
 ## Automatic Hooks (no action needed)
 

@@ -89,7 +89,7 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Zero LLM calls. Runs on Apple M1 8GB in 14 minutes. [Reproducible benchmark scripts →](https://github.com/edwin-hao-ai/Awareness/tree/main/benchmarks/longmemeval)
+Zero LLM calls. Runs on Apple M1 8GB in 14 minutes. [Reproducible benchmark scripts →](https://github.com/everest-an/Awareness/tree/main/benchmarks/longmemeval)
 
 ---
 
@@ -404,4 +404,4 @@ Most memory systems pick one extraction strategy. Awareness combines them:
 - **Zero-LLM backend** — all extraction runs on your LLM (Claude, GPT-4, Gemini, local Llama). The backend is a coordinator + storage layer; no inference costs pass through to you.
 - **One memory, many clients** — same data reachable via Claude Code, OpenClaw, npm / pip / ClawHub, MCP server.
 
-See [`docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md`](https://github.com/edwin-hao-ai/Awareness/blob/main/docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md) for the honest side-by-side against MemPalace.
+See [`docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md`](https://github.com/everest-an/Awareness/blob/main/docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md) for the honest side-by-side against MemPalace.

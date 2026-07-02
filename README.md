@@ -1,54 +1,21 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/awareness-wordmark-dark.svg"/>
-    <img src="assets/awareness-wordmark.svg" alt="Awareness SDK — Persistent Memory for AI Agents" width="760"/>
-  </picture>
+  <img src="assets/hero-banner.svg" alt="Awareness — Long-Term Memory for AI Agents" width="100%"/>
 </p>
 
 <p align="center">
-  <img src="assets/local-20s.gif" alt="Awareness — Long-Term Memory for AI Agents" width="100%"/>
-</p>
-
-<p align="center">
-  <a href="https://awareness.market/"><img src="https://img.shields.io/badge/Website-awareness.market-0EA5E9?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website"/></a>
-  <a href="https://awareness.market/docs"><img src="https://img.shields.io/badge/Docs-awareness.market%2Fdocs-14B8A6?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Docs"/></a>
-  <a href="https://pypi.org/project/awareness-memory-cloud/"><img src="https://img.shields.io/badge/PyPI-awareness--memory--cloud-00D4FF?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI"/></a>
-  <a href="https://www.npmjs.com/package/@awareness-sdk/memory-cloud"><img src="https://img.shields.io/badge/npm-memory--cloud-7B68EE?style=for-the-badge&logo=npm&logoColor=white" alt="npm memory cloud"/></a>
-  <a href="https://www.npmjs.com/package/@awareness-sdk/local"><img src="https://img.shields.io/badge/npm-local-22C55E?style=for-the-badge&logo=npm&logoColor=white" alt="npm local"/></a>
-  <a href="https://discord.com/invite/nMDrT538Qa"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-2563EB?style=for-the-badge" alt="License Apache 2.0"/></a>
+  <a href="https://pypi.org/project/awareness-memory-cloud/"><img src="https://img.shields.io/pypi/v/awareness-memory-cloud?color=00d4ff&label=PyPI" alt="PyPI"/></a>
+  <a href="https://www.npmjs.com/package/@awareness-sdk/memory-cloud"><img src="https://img.shields.io/npm/v/@awareness-sdk/memory-cloud?color=7b68ee&label=npm" alt="npm"/></a>
+  <a href="https://www.npmjs.com/package/@awareness-sdk/local"><img src="https://img.shields.io/npm/v/@awareness-sdk/local?color=22c55e&label=local" alt="local"/></a>
+  <a href="https://awareness.market"><img src="https://img.shields.io/badge/Cloud-awareness.market-5ce0d2" alt="Cloud"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue" alt="License"/></a>
+  <a href="https://discord.com/invite/nMDrT538Qa"><img src="https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord" alt="Discord"/></a>
 </p>
 
 <p align="center">
   <strong>Give your AI agent persistent memory across sessions.</strong><br/>
-  Local-first MCP memory platform for AI coding agents, SDK apps, and production workflows.<br/>
+  Local-first. Works offline. One command to set up. 13+ IDE support.<br/>
   <a href="https://awareness.market/docs">Docs</a> · <a href="https://awareness.market">Cloud</a> · <a href="https://discord.com/invite/nMDrT538Qa">Discord</a> · <a href="#quick-start">Quick Start</a>
 </p>
-
-Awareness SDK is a local-first memory layer for AI agents and AI coding workflows. It provides persistent memory, cross-session recall, hybrid retrieval, and easy integration through MCP, Python, and TypeScript SDKs.
-
-## Quick Navigation
-
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Packages](#packages)
-- [Integrations](#integrations)
-- [Environment Variables](#environment-variables)
-- [FAQ](#faq)
-
-## FAQ
-
-### Does it work offline?
-
-Yes. Local mode runs fully on your machine.
-
-### Is cloud required?
-
-No. Cloud features are optional.
-
-### How do I add memory to an existing app?
-
-Use `AwarenessInterceptor.wrap_openai()` / `wrap_anthropic()` (Python) or `wrapOpenAI()` / `wrapAnthropic()` (TypeScript).
 
 ---
 
@@ -151,7 +118,7 @@ const response = await openai.chat.completions.create({
 #### Claude Code
 
 ```bash
-/plugin marketplace add edwin-hao-ai/Awareness-SDK
+/plugin marketplace add everest-an/Awareness-SDK
 /plugin install awareness-memory@awareness
 ```
 
@@ -225,7 +192,7 @@ Your machine                          Cloud (optional)
 | [`awareness-memory-cloud`](https://pypi.org/project/awareness-memory-cloud/) | Python SDK with interceptors | `pip install awareness-memory-cloud` |
 | [`@awareness-sdk/memory-cloud`](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) | TypeScript SDK with interceptors | `npm i @awareness-sdk/memory-cloud` |
 | [`@awareness-sdk/openclaw-memory`](https://www.npmjs.com/package/@awareness-sdk/openclaw-memory) | OpenClaw plugin | `openclaw plugins install @awareness-sdk/openclaw-memory` |
-| [`claudecode/`](claudecode/README.md) | Claude Code plugin | `/plugin marketplace add edwin-hao-ai/Awareness-SDK` then `/plugin install awareness-memory@awareness` |
+| [`claudecode/`](claudecode/README.md) | Claude Code plugin | `/plugin marketplace add everest-an/Awareness-SDK` then `/plugin install awareness-memory@awareness` |
 
 ---
 

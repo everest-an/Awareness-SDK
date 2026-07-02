@@ -142,7 +142,7 @@ Most memory systems pick one extraction strategy. Awareness combines them:
 - **Zero-LLM backend** — all extraction runs on the client's LLM. No inference costs pass through to you.
 - **One memory, many clients** — same daemon reachable via Claude Code / Cursor / Windsurf / OpenClaw / plain MCP.
 
-See [`docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md`](https://github.com/edwin-hao-ai/Awareness/blob/main/docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md) for the honest side-by-side against MemPalace (96.6% R@5 via raw verbatim storage).
+See [`docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md`](https://github.com/everest-an/Awareness/blob/main/docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md) for the honest side-by-side against MemPalace (96.6% R@5 via raw verbatim storage).
 
 ## License
 

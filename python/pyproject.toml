@@ -33,8 +33,8 @@ dependencies = [
 [project.urls]
 Homepage = "https://awareness.market"
 Documentation = "https://awareness.market/docs?doc=python"
-Repository = "https://github.com/edwin-hao-ai/Awareness-SDK"
-Issues = "https://github.com/edwin-hao-ai/Awareness-SDK/issues"
+Repository = "https://github.com/everest-an/Awareness-SDK"
+Issues = "https://github.com/everest-an/Awareness-SDK/issues"
 
 [project.optional-dependencies]
 openai = [

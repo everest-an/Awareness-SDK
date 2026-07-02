@@ -5,11 +5,11 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/edwin-hao-ai/Awareness-SDK.git"
+    "url": "https://github.com/everest-an/Awareness-SDK.git"
   },
   "homepage": "https://awareness.market",
   "bugs": {
-    "url": "https://github.com/edwin-hao-ai/Awareness-SDK/issues"
+    "url": "https://github.com/everest-an/Awareness-SDK/issues"
   },
   "keywords": [
     "memory",

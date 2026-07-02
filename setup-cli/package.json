@@ -30,7 +30,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/edwin-hao-ai/Awareness-SDK.git",
+    "url": "git+https://github.com/everest-an/Awareness-SDK.git",
     "directory": "setup-cli"
   },
   "engines": {
