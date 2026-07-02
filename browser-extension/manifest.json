@@ -3,7 +3,10 @@
   "name": "Awareness Memory Bridge",
   "version": "0.1.0",
   "description": "Two-way memory bridge for ChatGPT / Gemini / Doubao / Kimi / DeepSeek — auto-capture Q&A into your local Awareness daemon and inject relevant memories back.",
-  "host_permissions": ["http://127.0.0.1:37800/*"],
+  "host_permissions": [
+    "http://127.0.0.1:37800/*",
+    "https://raw.githubusercontent.com/everest-an/Awareness-SDK/*"
+  ],
   "background": {
     "service_worker": "src/sw.js",
     "type": "module"

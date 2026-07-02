@@ -11,7 +11,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { matchSite, isValidRulepack } from '../src/lib/rulepack.js';
+import { matchSite, isValidRulepack, resolveRulepackUrl } from '../src/lib/rulepack.js';
+import { DEFAULT_RULEPACK_URL } from '../src/lib/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rulepack = JSON.parse(
@@ -55,6 +56,32 @@ describe('rule-pack: matchSite resolves each supported site', () => {
 
   it('does not suffix-spoof (evildeepseek.com ≠ deepseek.com)', () => {
     assert.equal(matchSite(rulepack, 'https://evildeepseek.com/x'), null);
+  });
+});
+
+describe('rule-pack: resolveRulepackUrl hot-update semantics', () => {
+  it('unconfigured (undefined/null) → canonical default URL', () => {
+    assert.equal(resolveRulepackUrl(undefined), DEFAULT_RULEPACK_URL);
+    assert.equal(resolveRulepackUrl(null), DEFAULT_RULEPACK_URL);
+  });
+  it('empty / whitespace string → revert to default', () => {
+    assert.equal(resolveRulepackUrl(''), DEFAULT_RULEPACK_URL);
+    assert.equal(resolveRulepackUrl('   '), DEFAULT_RULEPACK_URL);
+  });
+  it('explicit URL → user override wins (trimmed)', () => {
+    const custom = 'https://example.com/my-rulepack.json';
+    assert.equal(resolveRulepackUrl(custom), custom);
+    assert.equal(resolveRulepackUrl(`  ${custom}  `), custom);
+  });
+  it('non-string junk → falls back to default (never crashes)', () => {
+    assert.equal(resolveRulepackUrl(42), DEFAULT_RULEPACK_URL);
+    assert.equal(resolveRulepackUrl({}), DEFAULT_RULEPACK_URL);
+  });
+  it('canonical default points at the auto-synced public SDK repo on main', () => {
+    assert.match(
+      DEFAULT_RULEPACK_URL,
+      /^https:\/\/raw\.githubusercontent\.com\/everest-an\/Awareness-SDK\/main\/browser-extension\/rules\/default-rulepack\.json$/,
+    );
   });
 });
 

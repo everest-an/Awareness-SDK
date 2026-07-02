@@ -28,6 +28,17 @@ export const HEADER = {
   sessionId: 'X-Awareness-Session-Id',
 };
 
+// Canonical remote rule-pack (inert JSON) — hot-updates the per-site selectors
+// WITHOUT republishing the extension. Points at the auto-synced public SDK repo
+// on `main`: pushing an updated `default-rulepack.json` propagates to every
+// install on the next rulepack alarm (~6h) or immediately when the SW restarts.
+// MV3-safe: this is DATA, never code — it is only ever `fetch`ed as JSON and its
+// selector strings are passed to `document.querySelector`, never eval'd. Users
+// may override the source via the popup (SET_RULEPACK_URL); an explicit empty
+// string disables remote refresh and pins the bundled default.
+export const DEFAULT_RULEPACK_URL =
+  'https://raw.githubusercontent.com/everest-an/Awareness-SDK/main/browser-extension/rules/default-rulepack.json';
+
 // chrome.storage.local keys.
 export const STORAGE = {
   token: 'bridge_token',

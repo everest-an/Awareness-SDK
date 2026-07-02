@@ -13,7 +13,7 @@
  * fields — anything that looks like code is ignored by construction (we only
  * read known string/array selector fields downstream).
  */
-import { STORAGE } from './config.js';
+import { STORAGE, DEFAULT_RULEPACK_URL } from './config.js';
 
 /** Load the bundled default rule-pack that ships inside the extension. */
 export async function loadBundledRulepack() {
@@ -45,14 +45,27 @@ export async function getActiveRulepack() {
 }
 
 /**
+ * Resolve which remote URL to fetch from the user-configured storage value.
+ * Pure (no chrome.*), so the hot-update semantics are unit-testable:
+ *   - undefined / null / '' (never set, or cleared) → canonical DEFAULT_RULEPACK_URL,
+ *     so hot-update works out of the box AND clearing the popup reverts to default.
+ *   - '<url>' (user override)                        → that URL takes precedence.
+ * Any non-string junk falls back to the default rather than crashing.
+ */
+export function resolveRulepackUrl(configured) {
+  if (typeof configured === 'string' && configured.trim() !== '') return configured.trim();
+  return DEFAULT_RULEPACK_URL;
+}
+
+/**
  * Fetch a remote rule-pack (inert JSON) and cache it if valid. Called from the
- * rulepack alarm. Silently no-ops when no URL configured or fetch fails —
- * bundled default keeps working (FM: remote unavailable → fallback).
+ * rulepack alarm. Uses DEFAULT_RULEPACK_URL out of the box; a user may override
+ * it via the popup, or clear the field to revert to the default. Silently no-ops
+ * when fetch fails — bundled default keeps working (FM: remote unavailable → fallback).
  */
 export async function refreshRemoteRulepack() {
   const got = await chrome.storage.local.get(STORAGE.rulepackUrl);
-  const url = got[STORAGE.rulepackUrl];
-  if (!url || typeof url !== 'string') return { updated: false, reason: 'no_url' };
+  const url = resolveRulepackUrl(got[STORAGE.rulepackUrl]);
   try {
     const res = await fetch(url, { cache: 'no-cache' });
     if (!res.ok) return { updated: false, reason: `http_${res.status}` };
