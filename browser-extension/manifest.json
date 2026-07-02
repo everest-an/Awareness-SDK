@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Awareness Memory Bridge",
+  "version": "0.1.0",
+  "description": "Two-way memory bridge for ChatGPT / Gemini / Doubao / Kimi / DeepSeek — auto-capture Q&A into your local Awareness daemon and inject relevant memories back.",
+  "host_permissions": ["http://127.0.0.1:37800/*"],
+  "background": {
+    "service_worker": "src/sw.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*",
+        "https://www.doubao.com/*",
+        "https://www.kimi.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://chat.deepseek.com/*"
+      ],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "Awareness Memory Bridge"
+  },
+  "permissions": ["storage", "alarms"]
+}

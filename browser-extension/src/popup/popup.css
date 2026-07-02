@@ -1,0 +1,45 @@
+* { box-sizing: border-box; }
+body {
+  width: 320px;
+  margin: 0;
+  padding: 12px;
+  font: 13px/1.5 system-ui, -apple-system, sans-serif;
+  color: #1e293b;
+  background: #ffffff;
+}
+header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+header h1 { font-size: 15px; margin: 0; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; }
+.dot.on { background: #22c55e; }
+.note {
+  background: #fef3c7; border: 1px solid #fcd34d; color: #92400e;
+  border-radius: 8px; padding: 8px; font-size: 12px; margin-bottom: 10px;
+}
+.hidden { display: none; }
+section.binding { display: flex; flex-direction: column; gap: 4px; }
+label { font-size: 12px; color: #475569; margin-top: 6px; }
+label.check { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.value { font-weight: 600; }
+select, input[type="text"] {
+  width: 100%; padding: 5px 7px; border: 1px solid #cbd5e1;
+  border-radius: 6px; font: inherit;
+}
+.row { display: flex; gap: 6px; }
+.row input { flex: 1; }
+button {
+  cursor: pointer; border: 0; border-radius: 6px; padding: 6px 10px;
+  font: inherit; font-weight: 600;
+}
+button.primary { background: #0ea5e9; color: #fff; margin-top: 10px; }
+button.primary.wide { width: 100%; margin-top: 12px; }
+button.ghost { background: #e2e8f0; color: #334155; }
+section.stats { display: flex; gap: 8px; margin-top: 12px; }
+section.stats div {
+  flex: 1; text-align: center; background: #f1f5f9;
+  border-radius: 8px; padding: 8px 4px;
+}
+section.stats b { display: block; font-size: 18px; color: #0f172a; }
+section.stats span { font-size: 11px; color: #64748b; }
+footer { margin-top: 12px; }
+footer summary { cursor: pointer; font-size: 12px; color: #64748b; }
+footer input { margin: 6px 0; }

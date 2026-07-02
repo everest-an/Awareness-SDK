@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DeepSeek Fixture</title>
+</head>
+<body>
+  <!--
+    Minimal DeepSeek-shaped DOM for E2E. Reproduces the STABLE ds-* anchors the
+    adapter relies on:
+      - .ds-message               (message node)
+      - div.ds-markdown           (assistant final answer text)
+      - .ds-message-feedback-container  (appears only when a turn FINISHES —
+                                          this is the actionBarAppears signal)
+      - textarea#chat-input       (composer; nativeValueSetter inject target)
+    The <script> simulates streaming: on send, append an assistant message,
+    then ~500ms later append the feedback bar to signal completion.
+  -->
+  <main>
+    <div class="dad65929" id="conversation">
+      <div class="ds-message user-message">
+        <div class="fbb737a4">Seed question already in history?</div>
+      </div>
+    </div>
+    <form id="composer">
+      <textarea id="chat-input" placeholder="Message DeepSeek"></textarea>
+      <div role="button" aria-disabled="false" id="send-btn">Send</div>
+    </form>
+  </main>
+
+  <script>
+    const convo = document.getElementById('conversation');
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    function send() {
+      const q = input.value.trim();
+      if (!q) return;
+      // user turn
+      const userMsg = document.createElement('div');
+      userMsg.className = 'ds-message user-message';
+      const userText = document.createElement('div');
+      userText.className = 'fbb737a4';
+      userText.textContent = q;
+      userMsg.appendChild(userText);
+      convo.appendChild(userMsg);
+      input.value = '';
+
+      // assistant turn (streaming → finish)
+      const aMsg = document.createElement('div');
+      aMsg.className = 'ds-message assistant-message';
+      const md = document.createElement('div');
+      md.className = 'ds-markdown ds-markdown--block';
+      md.textContent = 'Use pgvector for exact rerank and an ANN index for recall; ' +
+        'store metadata alongside so external-chat captures survive workspace switches.';
+      aMsg.appendChild(md);
+      convo.appendChild(aMsg);
+
+      // finish signal: feedback bar appears ~500ms later
+      setTimeout(() => {
+        const bar = document.createElement('div');
+        bar.className = 'ds-message-feedback-container';
+        bar.innerHTML = '<button>Copy</button><button>Regenerate</button>';
+        aMsg.appendChild(bar);
+      }, 500);
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+  </script>
+</body>
+</html>

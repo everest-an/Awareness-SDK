@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="popup.css" />
+  <title>Awareness Memory Bridge</title>
+</head>
+<body>
+  <header>
+    <span class="dot" id="conn-dot"></span>
+    <h1>Awareness 记忆桥</h1>
+  </header>
+
+  <section id="offline-note" class="note hidden">
+    ○ 未连接本地记忆 · 所有功能静默关闭，不影响当前 AI。请确认 daemon 已启动（端口 37800）。
+  </section>
+
+  <section class="binding">
+    <label>当前站点</label>
+    <div id="site-name" class="value">—</div>
+
+    <label for="workspace">工作区 (workspace)</label>
+    <select id="workspace"><option value="">（使用 daemon 当前项目）</option></select>
+
+    <label for="session">Session</label>
+    <div class="row">
+      <input id="session" type="text" placeholder="ext_… (可留空自动)" />
+      <button id="new-session" class="ghost">新建</button>
+    </div>
+
+    <label class="check"><input type="checkbox" id="auto-capture" checked /> 自动记录问答</label>
+
+    <label for="filter">过滤强度</label>
+    <select id="filter">
+      <option value="strict">严格（剥离最多噪声）</option>
+      <option value="standard" selected>标准</option>
+      <option value="loose">宽松</option>
+    </select>
+
+    <button id="save-binding" class="primary">保存绑定</button>
+  </section>
+
+  <section class="stats">
+    <div><b id="stat-recorded">0</b><span>已记录</span></div>
+    <div><b id="stat-filtered">0</b><span>已过滤</span></div>
+    <div><b id="stat-queued">0</b><span>待同步</span></div>
+  </section>
+
+  <button id="record-now" class="primary wide">立即记录当前对话</button>
+
+  <footer>
+    <details>
+      <summary>高级：远程规则包 URL</summary>
+      <input id="rulepack-url" type="text" placeholder="https://…/rulepack.json (inert JSON)" />
+      <button id="save-rulepack" class="ghost">保存并刷新</button>
+    </details>
+  </footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

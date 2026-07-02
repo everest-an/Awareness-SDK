@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "updatedAt": "2026-07-02",
+  "source": "bundled-default",
+  "sites": [
+    {
+      "id": "deepseek",
+      "match": ["*://chat.deepseek.com/*"],
+      "selectors": {
+        "turnContainer": [".dad65929", "main", "[class*=\"conversation\"]"],
+        "message": [".ds-message"],
+        "assistantMessage": ["div.ds-markdown.ds-markdown--block", "div.ds-markdown"],
+        "userMessage": [".fbb737a4"],
+        "assistantText": ["div.ds-markdown.ds-markdown--block", "div.ds-markdown"]
+      },
+      "finishSignal": {
+        "type": "actionBarAppears",
+        "target": ".ds-message",
+        "actionBar": ".ds-message-feedback-container",
+        "fallback": { "type": "mutationQuiescence", "debounceMs": 700 }
+      },
+      "input": {
+        "kind": "textarea",
+        "selector": "textarea#chat-input",
+        "injectStrategy": "nativeValueSetter",
+        "sendButton": ["div[role=\"button\"][aria-disabled]", "button[type=\"submit\"]"]
+      },
+      "observeRoot": ["main", "body"],
+      "confidence": "high",
+      "lastVerified": "2026-07"
+    },
+    {
+      "id": "chatgpt",
+      "match": ["*://chatgpt.com/*", "*://chat.openai.com/*"],
+      "selectors": {
+        "turnContainer": ["[data-testid^=\"conversation-turn-\"]"],
+        "message": ["[data-message-author-role]"],
+        "assistantMessage": ["[data-message-author-role=\"assistant\"]"],
+        "userMessage": ["[data-message-author-role=\"user\"]"],
+        "assistantText": ["[data-message-author-role=\"assistant\"] .markdown", "[data-message-author-role=\"assistant\"] .prose"]
+      },
+      "finishSignal": {
+        "type": "classRemoved",
+        "target": "[data-message-author-role=\"assistant\"]",
+        "flagClass": "result-streaming",
+        "fallback": { "type": "selectorGone", "selector": "[data-testid=\"stop-button\"]" }
+      },
+      "input": {
+        "kind": "contenteditable",
+        "editor": "prosemirror",
+        "selector": "#prompt-textarea",
+        "injectStrategy": "execCommandInsertText",
+        "sendButton": ["[data-testid=\"send-button\"]", "button[aria-label=\"Send Message\"]"]
+      },
+      "observeRoot": ["main", "#__next"],
+      "confidence": "high",
+      "lastVerified": "2026-06"
+    },
+    {
+      "id": "gemini",
+      "match": ["*://gemini.google.com/*"],
+      "selectors": {
+        "turnContainer": ["user-query, model-response"],
+        "message": ["user-query", "model-response"],
+        "assistantMessage": ["model-response"],
+        "userMessage": ["user-query"],
+        "assistantText": [".model-response-text", "message-content"],
+        "userText": [".query-text", ".user-query-container"]
+      },
+      "finishSignal": {
+        "type": "mutationQuiescence",
+        "target": "model-response",
+        "debounceMs": 600,
+        "fallback": { "type": "selectorGone", "selector": ".stop-icon" }
+      },
+      "input": {
+        "kind": "contenteditable",
+        "editor": "quill",
+        "selector": ".ql-editor[contenteditable=\"true\"]",
+        "injectStrategy": "execCommandInsertText",
+        "sendButton": ["button[aria-label=\"Send message\"]", ".send-button.mdc-icon-button"]
+      },
+      "observeRoot": ["main", "body"],
+      "confidence": "medium-high",
+      "lastVerified": "2026-05"
+    },
+    {
+      "id": "doubao",
+      "match": ["*://www.doubao.com/*"],
+      "selectors": {
+        "turnContainer": [".message-list", ".chat-container", ".scroll-container"],
+        "message": [".message-item"],
+        "assistantMessage": ["[data-testid=\"message_action_like\"]"],
+        "assistantText": [".message-item"],
+        "userMessage": [".message-item"]
+      },
+      "finishSignal": {
+        "type": "actionBarAppears",
+        "target": ".message-item",
+        "actionBar": "[data-testid=\"message_action_like\"]",
+        "fallback": { "type": "mutationQuiescence", "debounceMs": 700 }
+      },
+      "input": {
+        "kind": "textarea",
+        "selector": "div#root textarea",
+        "injectStrategy": "nativeValueSetter",
+        "sendButton": ["button[type=\"submit\"]", "[data-testid=\"send_button\"]"]
+      },
+      "observeRoot": ["div#root", "body"],
+      "confidence": "medium",
+      "lastVerified": "2026-04"
+    },
+    {
+      "id": "kimi",
+      "match": ["*://www.kimi.com/*", "*://kimi.moonshot.cn/*"],
+      "selectors": {
+        "turnContainer": ["[class*=\"chat\"]", "main", "body"],
+        "message": ["[data-testid=\"message\"]", "[data-testid=\"chat-message\"]", "[data-message-role]", "[data-role]", ".message", "[class*=\"message-item\"]", "[class*=\"MessageItem\"]", "[class*=\"message_container\"]"],
+        "assistantMessage": ["[data-role=\"assistant\"]", "[data-message-role=\"assistant\"]"],
+        "userMessage": ["[data-role=\"user\"]", "[data-message-role=\"user\"]"],
+        "assistantText": [".markdown", ".message-content", "[class*=\"content\"]"]
+      },
+      "finishSignal": {
+        "type": "mutationQuiescence",
+        "target": "[class*=\"message\"]",
+        "debounceMs": 800,
+        "fallback": { "type": "mutationQuiescence", "debounceMs": 800 }
+      },
+      "input": {
+        "kind": "contenteditable",
+        "selector": "[contenteditable=\"true\"]",
+        "injectStrategy": "execCommandInsertText",
+        "sendButton": ["[data-testid=\"send-button\"]", "button[type=\"submit\"]"]
+      },
+      "observeRoot": ["main", "body"],
+      "confidence": "medium",
+      "lastVerified": "2026-07"
+    }
+  ]
+}
