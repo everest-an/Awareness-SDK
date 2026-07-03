@@ -94,3 +94,32 @@ describe('rule-pack: DeepSeek entry has the stable ds-* anchors', () => {
     assert.equal(ds.finishSignal.actionBar, '.ds-message-feedback-container');
   });
 });
+
+describe('rule-pack: Doubao entry uses stable data-* anchors (2026 rebuild)', () => {
+  // The 2026 rebuild stripped ALL data-testid and moved to hashed CSS-module
+  // classes; only these data-* anchors survive across deploys (verified live).
+  it('assistant text = [data-message-id]:has(.md-box-root); finish = selectorGone on [data-streaming]', () => {
+    const db = matchSite(rulepack, 'https://www.doubao.com/chat/1');
+    assert.ok(db, 'doubao must match');
+    assert.ok(db.selectors.assistantText.some((s) => s.includes('md-box-root')));
+    assert.ok(db.selectors.userMessage.some((s) => s.includes(':not(:has(.md-box-root))')));
+    assert.equal(db.finishSignal.type, 'selectorGone');
+    assert.equal(db.finishSignal.selector, '[data-streaming="true"]');
+    assert.equal(db.input.selector, 'div#root textarea');
+    // Must NOT regress to the dead data-testid anchors.
+    assert.ok(!JSON.stringify(db).includes('message_action_like'));
+  });
+});
+
+describe('rule-pack: Kimi entry uses stable .segment-* anchors', () => {
+  it('assistant/user segments; actionBarAppears on .segment-assistant-actions; Lexical composer', () => {
+    const km = matchSite(rulepack, 'https://www.kimi.com/chat/1');
+    assert.ok(km, 'kimi must match');
+    assert.equal(km.selectors.assistantMessage[0], '.segment-assistant');
+    assert.equal(km.selectors.userMessage[0], '.segment-user');
+    assert.ok(km.selectors.assistantText.some((s) => s.includes('.markdown')));
+    assert.equal(km.finishSignal.type, 'actionBarAppears');
+    assert.equal(km.finishSignal.actionBar, '.segment-assistant-actions');
+    assert.match(km.input.selector, /data-lexical-editor/);
+  });
+});

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-07-02",
+  "updatedAt": "2026-07-03",
   "source": "bundled-default",
   "sites": [
     {
@@ -54,7 +54,7 @@
       },
       "observeRoot": ["main", "#__next"],
       "confidence": "high",
-      "lastVerified": "2026-06"
+      "lastVerified": "2026-07"
     },
     {
       "id": "gemini",
@@ -87,17 +87,18 @@
     {
       "id": "doubao",
       "match": ["*://www.doubao.com/*"],
+      "_note": "Doubao 2026 rebuild removed ALL data-testid + uses hashed CSS-module classes (unstable). Anchored on stable data-* attributes verified on the live logged-in DOM (2026-07-03).",
       "selectors": {
-        "turnContainer": [".message-list", ".chat-container", ".scroll-container"],
-        "message": [".message-item"],
-        "assistantMessage": ["[data-testid=\"message_action_like\"]"],
-        "assistantText": [".message-item"],
-        "userMessage": [".message-item"]
+        "turnContainer": ["[data-message-id]", "[data-container-type=\"block-v2\"]"],
+        "message": ["[data-message-id]"],
+        "assistantMessage": ["[data-message-id]:has(.md-box-root)", ".md-box-root"],
+        "userMessage": ["[data-message-id]:not(:has(.md-box-root))"],
+        "assistantText": ["[data-message-id]:has(.md-box-root)", ".md-box-root"],
+        "userText": ["[data-message-id]:not(:has(.md-box-root))"]
       },
       "finishSignal": {
-        "type": "actionBarAppears",
-        "target": ".message-item",
-        "actionBar": "[data-testid=\"message_action_like\"]",
+        "type": "selectorGone",
+        "selector": "[data-streaming=\"true\"]",
         "fallback": { "type": "mutationQuiescence", "debounceMs": 700 }
       },
       "input": {
@@ -107,33 +108,36 @@
         "sendButton": ["button[type=\"submit\"]", "[data-testid=\"send_button\"]"]
       },
       "observeRoot": ["div#root", "body"],
-      "confidence": "medium",
-      "lastVerified": "2026-04"
+      "confidence": "high",
+      "lastVerified": "2026-07"
     },
     {
       "id": "kimi",
       "match": ["*://www.kimi.com/*", "*://kimi.moonshot.cn/*"],
+      "_note": "Kimi uses stable .segment-* classes (segment-user / segment-assistant / segment-content / markdown). Composer is a Lexical editor (data-lexical-editor); execCommandInsertText DOES drive it (Lexical applies the edit via its reconciler asynchronously). Send control is a div.send-button-container (not a <button>). Verified on live logged-in DOM 2026-07-03.",
       "selectors": {
-        "turnContainer": ["[class*=\"chat\"]", "main", "body"],
-        "message": ["[data-testid=\"message\"]", "[data-testid=\"chat-message\"]", "[data-message-role]", "[data-role]", ".message", "[class*=\"message-item\"]", "[class*=\"MessageItem\"]", "[class*=\"message_container\"]"],
-        "assistantMessage": ["[data-role=\"assistant\"]", "[data-message-role=\"assistant\"]"],
-        "userMessage": ["[data-role=\"user\"]", "[data-message-role=\"user\"]"],
-        "assistantText": [".markdown", ".message-content", "[class*=\"content\"]"]
+        "turnContainer": [".segment"],
+        "message": [".segment"],
+        "assistantMessage": [".segment-assistant"],
+        "userMessage": [".segment-user"],
+        "assistantText": [".segment-assistant .markdown", ".segment-assistant .segment-content"],
+        "userText": [".segment-user .segment-content"]
       },
       "finishSignal": {
-        "type": "mutationQuiescence",
-        "target": "[class*=\"message\"]",
-        "debounceMs": 800,
+        "type": "actionBarAppears",
+        "target": ".segment-assistant",
+        "actionBar": ".segment-assistant-actions",
         "fallback": { "type": "mutationQuiescence", "debounceMs": 800 }
       },
       "input": {
         "kind": "contenteditable",
-        "selector": "[contenteditable=\"true\"]",
+        "editor": "lexical",
+        "selector": "[contenteditable=\"true\"][data-lexical-editor=\"true\"]",
         "injectStrategy": "execCommandInsertText",
-        "sendButton": ["[data-testid=\"send-button\"]", "button[type=\"submit\"]"]
+        "sendButton": [".send-button-container", "button[type=\"submit\"]"]
       },
-      "observeRoot": ["main", "body"],
-      "confidence": "medium",
+      "observeRoot": [".message-list-container", "main", "body"],
+      "confidence": "high",
       "lastVerified": "2026-07"
     }
   ]

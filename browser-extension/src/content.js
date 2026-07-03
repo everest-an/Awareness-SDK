@@ -349,7 +349,13 @@
       const next = (input.value ? input.value + '\n\n' : '') + text;
       if (setter) setter.call(input, next); else input.value = next;
       input.dispatchEvent(new Event('input', { bubbles: true }));
-    } else { // execCommandInsertText (ProseMirror / Quill / contenteditable)
+    } else { // execCommandInsertText (ProseMirror / Quill / Lexical / contenteditable)
+      // NOTE: execCommand('insertText') drives all three editor engines we target,
+      // including Kimi's Lexical — Lexical applies the edit through its own reconciler
+      // ASYNCHRONOUSLY (so the DOM text updates a tick later, but it does land).
+      // Verified on kimi.com 2026-07-03. Do NOT add a synchronous "did it change?"
+      // guard + beforeinput fallback here: the async editors always read unchanged
+      // synchronously, which would double-insert.
       try {
         document.execCommand('insertText', false, text);
       } catch {
