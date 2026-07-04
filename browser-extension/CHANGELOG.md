@@ -4,6 +4,35 @@ All notable changes to the F-064 browser extension. Format: `## [version] — da
 grouped Added / Changed / Fixed. User-visible wording (what *you* see), not just
 "fix X".
 
+## [0.2.0] — 2026-07-05 · to-C hardening (F-085)
+
+Security + resilience pass before large-scale to-C rollout. Closes the 3 red-lines
+from `docs/features/f-064/COMMERCIAL-READINESS-AUDIT.md`.
+
+### Security
+- **A same-machine web page can no longer read your local memories.** The local
+  daemon's `/prompt/inject` endpoint (previously no-key) now requires a trusted
+  Origin (the extension / a whitelisted chat site) or a valid bridge token; an
+  anonymous cross-origin page gets `403 forbidden_origin`. Escape hatch for rare
+  web-based host-LLMs: `AWARENESS_PROMPT_INJECT_OPEN=1`. (R1, daemon-side)
+- **Remote rule-packs are now signature-verified (verify-before-apply).** The
+  extension verifies a detached Ed25519 signature over the exact pack bytes with
+  an embedded public key before applying it; a tampered or unsigned pack is
+  rejected and the bundled default is kept — so a poisoned pack can't retarget
+  scraping at, say, a password field. *Mechanism + tests landed; enforcement
+  activates once the signing key is provisioned by the publish pipeline (T4).* (R2)
+
+### Reliability
+- **Daemon hiccups degrade visibly instead of crashing.** Added L3 chaos coverage
+  (happy / 5xx-HTML / timeout) for record, recall-inject, and rule-pack fetch: all
+  return a structured degraded result (retry/queue/fallback), never a throw or an
+  injected `"undefined"`. (R3)
+
+### Tests
+- `sdks/local/test/prompt-inject-auth.test.mjs` (6), `test/rulepack-signature.test.mjs`
+  (10), `test/chaos-daemon.test.mjs` (10). Full extension suite 39/39, L1 io-boundary
+  guard green.
+
 ## [0.1.0] — 2026-07-04
 
 First public MVP of the two-way memory bridge for non-IDE web chats. Turns your
