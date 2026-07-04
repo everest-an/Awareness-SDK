@@ -28,10 +28,16 @@ from `docs/features/f-064/COMMERCIAL-READINESS-AUDIT.md`.
   return a structured degraded result (retry/queue/fallback), never a throw or an
   injected `"undefined"`. (R3)
 
+### Tooling
+- `scripts/sign-rulepack.mjs` (T4) — Ed25519 rule-pack signing CLI (`genkey` /
+  `sign` / `verify`). Publish-side counterpart to R2's verify-before-apply; its
+  node:crypto signatures verify under the extension's Web Crypto (interop test).
+  Private keys are `.gitignore`d — provisioning the key turns R2 enforcement on.
+
 ### Tests
 - `sdks/local/test/prompt-inject-auth.test.mjs` (6), `test/rulepack-signature.test.mjs`
-  (10), `test/chaos-daemon.test.mjs` (10). Full extension suite 39/39, L1 io-boundary
-  guard green.
+  (10), `test/chaos-daemon.test.mjs` (10), `test/rulepack-sign-interop.test.mjs` (3).
+  Full extension suite green, L1 io-boundary guard green.
 
 ## [0.1.0] — 2026-07-04
 

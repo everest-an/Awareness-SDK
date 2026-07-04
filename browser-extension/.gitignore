@@ -3,3 +3,8 @@ test-results/
 playwright-report/
 test/e2e/_shots/
 *.log
+
+# F-085 (T4) · rule-pack signing PRIVATE keys must never be committed.
+*-signing-key.pem
+*.pem
+rulepack-signing-key*
