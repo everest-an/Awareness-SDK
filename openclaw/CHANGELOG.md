@@ -118,7 +118,7 @@
   0.0-1.0 self-assessments: `novelty_score`, `durability_score`,
   `specificity_score`. The daemon drops cards below 0.4 on novelty or 0.4
   on durability. No migration needed — reinstall via
-  `openclaw plugins install @awareness-sdk/openclaw-memory@latest` and the
+  `openclaw plugins install @awareness.market/openclaw-memory@latest` and the
   new guidance kicks in on the next session.
 
 ## [0.6.11](https://github.com/edwinhao/Awareness/compare/sdks/openclaw-v0.6.10...sdks/openclaw-v0.6.11) (2026-04-17)

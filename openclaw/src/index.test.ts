@@ -298,7 +298,7 @@ describe("register (plugin entry point)", () => {
           "$schema": "https://openclaw.dev/schemas/openclaw.json",
           plugins: {
             "memory-awareness": {
-              package: "@awareness-sdk/openclaw-memory",
+              package: "@awareness.market/openclaw-memory",
               config: { apiKey: "nested-key", memoryId: "nested-mem" },
             },
           },

@@ -1,6 +1,6 @@
-# @awareness-sdk/openclaw-memory
+# @awareness.market/openclaw-memory
 
-[![npm](https://img.shields.io/npm/v/@awareness-sdk/openclaw-memory?color=7b68ee)](https://www.npmjs.com/package/@awareness-sdk/openclaw-memory) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-95.6%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
+[![npm](https://img.shields.io/npm/v/@awareness.market/openclaw-memory?color=7b68ee)](https://www.npmjs.com/package/@awareness.market/openclaw-memory) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-95.6%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
 
 OpenClaw memory plugin backed by Awareness Memory Cloud.
 
@@ -46,7 +46,7 @@ Awareness Memory achieves **95.6% Recall@5** on [LongMemEval](https://arxiv.org/
 **Plugin (full integration):**
 
 ```bash
-openclaw plugins install @awareness-sdk/openclaw-memory
+openclaw plugins install @awareness.market/openclaw-memory
 ```
 
 **Or Skill (via ClawHub):**

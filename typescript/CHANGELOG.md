@@ -91,7 +91,7 @@
 
 ### Fixed
 - **`localUrl` default port was wrong (vaporware)**: Default `localUrl` was `http://localhost:8765` since v0.x, but no Awareness component has ever served port 8765 — the cloud backend serves 8000 (docker-compose) and the local daemon serves 37800. So `mode: "local"` and `mode: "auto"` have **never worked** against any real deployment. Default is now `http://localhost:8000/api/v1` (matches `docker-compose up`).
-- **Local mode semantics clarified**: `mode: "local"` means "self-hosted Awareness backend" (same REST shape as cloud, just a different host). It is **NOT** the `@awareness-sdk/local` daemon (port 37800) — that has a different REST shape (single-tenant, `/api/v1/topics`, `/api/v1/perceptions`, …) and should be consumed via `@awareness-sdk/local` or `@awareness-sdk/openclaw-memory`. JSDoc on `MemoryCloudClientConfig.mode` and `localUrl` documents this clearly.
+- **Local mode semantics clarified**: `mode: "local"` means "self-hosted Awareness backend" (same REST shape as cloud, just a different host). It is **NOT** the `@awareness-sdk/local` daemon (port 37800) — that has a different REST shape (single-tenant, `/api/v1/topics`, `/api/v1/perceptions`, …) and should be consumed via `@awareness-sdk/local` or `@awareness.market/openclaw-memory`. JSDoc on `MemoryCloudClientConfig.mode` and `localUrl` documents this clearly.
 
 ### Compatibility
 - Pure default-value change. Anyone passing `localUrl` explicitly is unaffected.

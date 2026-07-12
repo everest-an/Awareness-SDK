@@ -106,7 +106,7 @@
   (same REST shape as cloud). It is **NOT** the `@awareness-sdk/local` daemon
   (port 37800) — that has a different REST shape (single-tenant, `/api/v1/topics`,
   `/api/v1/perceptions`, …) and should be consumed via the daemon's own client or
-  `@awareness-sdk/openclaw-memory`.
+  `@awareness.market/openclaw-memory`.
 
 ### Compatibility
 - Pure default-value change. Anyone passing `local_url` explicitly is unaffected.

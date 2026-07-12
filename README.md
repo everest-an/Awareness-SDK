@@ -130,7 +130,7 @@ Skills: `/awareness-memory:session-start` · `/awareness-memory:recall` · `/awa
 
 ```bash
 # Plugin (full integration):
-openclaw plugins install @awareness-sdk/openclaw-memory
+openclaw plugins install @awareness.market/openclaw-memory
 
 # Or Skill (via ClawHub):
 npx clawhub@latest install awareness-memory
@@ -138,7 +138,7 @@ npx clawhub@latest install awareness-memory
 
 Auto-recall on session start. Auto-capture on session end. Zero configuration.
 
-[Documentation](openclaw/README.md) · [npm](https://www.npmjs.com/package/@awareness-sdk/openclaw-memory)
+[Documentation](openclaw/README.md) · [npm](https://www.npmjs.com/package/@awareness.market/openclaw-memory)
 
 ---
 
@@ -191,7 +191,7 @@ Your machine                          Cloud (optional)
 | [`@awareness.market/setup`](https://www.npmjs.com/package/@awareness.market/setup) | CLI setup for all 13+ IDEs | `npx @awareness.market/setup` |
 | [`awareness-memory-cloud`](https://pypi.org/project/awareness-memory-cloud/) | Python SDK with interceptors | `pip install awareness-memory-cloud` |
 | [`@awareness-sdk/memory-cloud`](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) | TypeScript SDK with interceptors | `npm i @awareness-sdk/memory-cloud` |
-| [`@awareness-sdk/openclaw-memory`](https://www.npmjs.com/package/@awareness-sdk/openclaw-memory) | OpenClaw plugin | `openclaw plugins install @awareness-sdk/openclaw-memory` |
+| [`@awareness.market/openclaw-memory`](https://www.npmjs.com/package/@awareness.market/openclaw-memory) | OpenClaw plugin | `openclaw plugins install @awareness.market/openclaw-memory` |
 | [`claudecode/`](claudecode/README.md) | Claude Code plugin | `/plugin marketplace add everest-an/Awareness-SDK` then `/plugin install awareness-memory@awareness` |
 
 ---
