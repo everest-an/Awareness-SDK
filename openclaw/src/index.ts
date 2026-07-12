@@ -271,7 +271,7 @@ export function registerSetupMode(api: PluginApi, baseUrl: string = DEFAULT_BASE
           },
           {
             method: "One-command cloud setup",
-            command: "npx @awareness-sdk/setup --ide openclaw",
+            command: "npx @awareness.market/setup --ide openclaw",
             description:
               "Opens browser for login, lets you pick a memory, and writes config automatically.",
           },

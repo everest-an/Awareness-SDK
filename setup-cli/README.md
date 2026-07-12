@@ -1,11 +1,11 @@
-# @awareness-sdk/setup
+# @awareness.market/setup
 
-[![npm](https://img.shields.io/npm/v/@awareness-sdk/setup?color=22c55e)](https://www.npmjs.com/package/@awareness-sdk/setup) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
+[![npm](https://img.shields.io/npm/v/@awareness.market/setup?color=22c55e)](https://www.npmjs.com/package/@awareness.market/setup) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
 
 **One command to give your AI agent persistent memory. 13+ IDEs supported.**
 
 ```bash
-npx @awareness-sdk/setup
+npx @awareness.market/setup
 ```
 
 Auto-detects your IDE, starts a local memory daemon, injects workflow rules, and configures MCP — all in one command. No account needed. Works offline.
@@ -15,7 +15,7 @@ Auto-detects your IDE, starts a local memory daemon, injects workflow rules, and
 ## How It Works
 
 ```
-npx @awareness-sdk/setup
+npx @awareness.market/setup
     │
     ├── Detects IDE (Cursor? Claude Code? Windsurf? ...)
     ├── Starts local daemon (localhost:37800)
@@ -29,7 +29,7 @@ npx @awareness-sdk/setup
 ### Local Mode (Default)
 
 ```bash
-npx @awareness-sdk/setup
+npx @awareness.market/setup
 ```
 
 - Starts a local daemon on `localhost:37800`
@@ -40,7 +40,7 @@ npx @awareness-sdk/setup
 ### Cloud Mode
 
 ```bash
-npx @awareness-sdk/setup --cloud
+npx @awareness.market/setup --cloud
 ```
 
 - Opens browser for device-auth login
@@ -69,21 +69,21 @@ npx @awareness-sdk/setup --cloud
 ## All Options
 
 ```
-npx @awareness-sdk/setup                 Local mode (default)
-npx @awareness-sdk/setup --cloud         Cloud mode (login + sync)
-npx @awareness-sdk/setup --ide cursor    Force specific IDE
-npx @awareness-sdk/setup --no-auth       Rules only, no MCP config
-npx @awareness-sdk/setup --dry-run       Preview without writing
-npx @awareness-sdk/setup --force         Overwrite managed files
-npx @awareness-sdk/setup --list          Show supported IDEs
-npx @awareness-sdk/setup --logout        Clear saved credentials
-npx @awareness-sdk/setup --api-base <url>  Custom API URL
+npx @awareness.market/setup                 Local mode (default)
+npx @awareness.market/setup --cloud         Cloud mode (login + sync)
+npx @awareness.market/setup --ide cursor    Force specific IDE
+npx @awareness.market/setup --no-auth       Rules only, no MCP config
+npx @awareness.market/setup --dry-run       Preview without writing
+npx @awareness.market/setup --force         Overwrite managed files
+npx @awareness.market/setup --list          Show supported IDEs
+npx @awareness.market/setup --logout        Clear saved credentials
+npx @awareness.market/setup --api-base <url>  Custom API URL
 ```
 
 ### Manual Cloud Config
 
 ```bash
-npx @awareness-sdk/setup --mcp-url <url> --api-key <key> --memory-id <id>
+npx @awareness.market/setup --mcp-url <url> --api-key <key> --memory-id <id>
 ```
 
 ## Non-Interactive Mode

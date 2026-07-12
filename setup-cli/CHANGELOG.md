@@ -22,7 +22,7 @@ Setup CLI used to hard-fail with `Could not auto-detect IDE. Use --ide <name>`
 exit 1 when run on a host with no supported IDE installed (CI agents, headless
 SSH, fresh Docker containers). It now prints an informational message and
 continues with daemon-only setup, exit 0. Users can wire MCP later via
-`npx @awareness-sdk/setup --ide <name>`.
+`npx @awareness.market/setup --ide <name>`.
 
 **Impact**: zero risk for existing users — they always had IDEs detected and
 this branch never ran for them. Only edge cases improve.
@@ -58,7 +58,7 @@ this branch never ran for them. Only edge cases improve.
   MCP surface (`awareness_recall({query: "..."})` / `awareness_record({content: "..."})`),
   the prompt text bundled with setup-cli still described the pre-F-053 two-phase
   progressive-disclosure pattern (`awareness_recall(semantic_query=..., keyword_query=..., detail='summary')`
-  then `detail='full' + ids=[...]`). Users running `npx @awareness-sdk/setup` got
+  then `detail='full' + ids=[...]`). Users running `npx @awareness.market/setup` got
   an `awareness-spec.json` that taught their IDE agent the **old** API, causing
   deprecation-warning spam and worse recall quality (no Phase 3 query-type
   routing, no recency channel, no budget-tier shaping for the agent's calls).

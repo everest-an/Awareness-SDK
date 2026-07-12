@@ -46,12 +46,12 @@ Session 2: Agent starts fresh
 Works with **Claude Code, Cursor, Windsurf, Cline, GitHub Copilot, Codex, and 7 more IDEs**.
 
 ```bash
-npx @awareness-sdk/setup
+npx @awareness.market/setup
 ```
 
 That's it. Your AI agent now has persistent memory. No account needed. Works offline.
 
-Want cloud features later? `npx @awareness-sdk/setup --cloud`
+Want cloud features later? `npx @awareness.market/setup --cloud`
 
 ### Option 2: Zero-Code Interceptor (Python/TypeScript SDK)
 
@@ -188,7 +188,7 @@ Your machine                          Cloud (optional)
 | Package | Description | Install |
 |---------|-------------|---------|
 | [`@awareness-sdk/local`](https://www.npmjs.com/package/@awareness-sdk/local) | Local daemon + MCP server | `npx @awareness-sdk/local start` |
-| [`@awareness-sdk/setup`](https://www.npmjs.com/package/@awareness-sdk/setup) | CLI setup for all 13+ IDEs | `npx @awareness-sdk/setup` |
+| [`@awareness.market/setup`](https://www.npmjs.com/package/@awareness.market/setup) | CLI setup for all 13+ IDEs | `npx @awareness.market/setup` |
 | [`awareness-memory-cloud`](https://pypi.org/project/awareness-memory-cloud/) | Python SDK with interceptors | `pip install awareness-memory-cloud` |
 | [`@awareness-sdk/memory-cloud`](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) | TypeScript SDK with interceptors | `npm i @awareness-sdk/memory-cloud` |
 | [`@awareness-sdk/openclaw-memory`](https://www.npmjs.com/package/@awareness-sdk/openclaw-memory) | OpenClaw plugin | `openclaw plugins install @awareness-sdk/openclaw-memory` |

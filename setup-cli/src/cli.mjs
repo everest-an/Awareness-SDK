@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * @awareness-sdk/setup - Sync Awareness Memory workflow rules into IDE config files.
+ * @awareness.market/setup - Sync Awareness Memory workflow rules into IDE config files.
  */
 
 import readline from "node:readline";
@@ -277,17 +277,17 @@ async function doctorCommand() {
           const spec = loadRulesSpec();
           const latestVersion = spec.version || 0;
           if (localVersion < latestVersion) {
-            console.log(`       [\u26A0\uFE0F] Rules outdated (v${localVersion} \u2192 v${latestVersion}). Run: npx @awareness-sdk/setup rules --sync`);
+            console.log(`       [\u26A0\uFE0F] Rules outdated (v${localVersion} \u2192 v${latestVersion}). Run: npx @awareness.market/setup rules --sync`);
             issues++;
           }
         } catch { /* ignore version check errors */ }
       } else if (rulesExist) {
         console.log(`       [!!] ${config.rules_file} exists but NO awareness rules`);
-        console.log(`            Fix: npx @awareness-sdk/setup --ide ${ideId}`);
+        console.log(`            Fix: npx @awareness.market/setup --ide ${ideId}`);
         issues++;
       } else {
         console.log(`       [!!] ${config.rules_file} missing`);
-        console.log(`            Fix: npx @awareness-sdk/setup --ide ${ideId}`);
+        console.log(`            Fix: npx @awareness.market/setup --ide ${ideId}`);
         issues++;
       }
 
@@ -371,22 +371,22 @@ async function doctorCommand() {
 
 export function printUsage() {
   console.log(`
-@awareness-sdk/setup - Set up Awareness Memory for your IDE
+@awareness.market/setup - Set up Awareness Memory for your IDE
 
 Usage:
-  npx @awareness-sdk/setup                 Local mode (default): start daemon + sync rules + MCP
-  npx @awareness-sdk/setup --cloud         Cloud mode: login, select memory, sync rules + MCP
-  npx @awareness-sdk/setup --ide cursor    Force specific IDE
-  npx @awareness-sdk/setup --no-auth       Skip login (rules only, no MCP config)
-  npx @awareness-sdk/setup --configure-mcp Prompt for MCP config values manually
-  npx @awareness-sdk/setup --mcp-url <url> --api-key <key> --memory-id <id>
+  npx @awareness.market/setup                 Local mode (default): start daemon + sync rules + MCP
+  npx @awareness.market/setup --cloud         Cloud mode: login, select memory, sync rules + MCP
+  npx @awareness.market/setup --ide cursor    Force specific IDE
+  npx @awareness.market/setup --no-auth       Skip login (rules only, no MCP config)
+  npx @awareness.market/setup --configure-mcp Prompt for MCP config values manually
+  npx @awareness.market/setup --mcp-url <url> --api-key <key> --memory-id <id>
                                            Provide MCP config values directly (skip auth / cloud mode)
-  npx @awareness-sdk/setup --dry-run       Preview without writing
-  npx @awareness-sdk/setup --force         Allow overwrite for managed files without markers
-  npx @awareness-sdk/setup --list          Show supported IDEs
-  npx @awareness-sdk/setup --logout        Clear saved credentials
-  npx @awareness-sdk/setup doctor          Run diagnostic checks on all channels
-  npx @awareness-sdk/setup --api-base <url> Use custom API base URL
+  npx @awareness.market/setup --dry-run       Preview without writing
+  npx @awareness.market/setup --force         Allow overwrite for managed files without markers
+  npx @awareness.market/setup --list          Show supported IDEs
+  npx @awareness.market/setup --logout        Clear saved credentials
+  npx @awareness.market/setup doctor          Run diagnostic checks on all channels
+  npx @awareness.market/setup --api-base <url> Use custom API base URL
 
 Modes:
   Default (local):  Runs a local Awareness daemon on port ${LOCAL_DAEMON_PORT}.
@@ -864,7 +864,7 @@ async function runLocalMode({ argv, dryRun, force, ask, isInteractive }) {
         console.error("Could not start the local daemon.");
         console.error("Install it first:  npm install -g @awareness.market/local");
         console.error("Or start manually: npx @awareness.market/local start");
-        console.error("\nTo use cloud mode instead: npx @awareness-sdk/setup --cloud");
+        console.error("\nTo use cloud mode instead: npx @awareness.market/setup --cloud");
         return 1;
       }
 
@@ -926,7 +926,7 @@ async function runLocalMode({ argv, dryRun, force, ask, isInteractive }) {
     console.log("  Dashboard:    http://localhost:37800/");
     console.log("  Your data never leaves your computer.");
     console.log("\n  Want cloud sync & collaboration?");
-    console.log("  → npx @awareness-sdk/setup --cloud");
+    console.log("  → npx @awareness.market/setup --cloud");
     console.log("────────────────────────────────────────");
     // Dashboard auto-open is handled by the local daemon on first run.
   }
@@ -944,7 +944,7 @@ async function syncOneIdeLocal({ ideId, dryRun, force }) {
 
   // OpenClaw is cloud-only (needs apiKey + memoryId for plugin config)
   if (ideId === "openclaw") {
-    console.log("ℹ OpenClaw requires cloud mode. Run: npx @awareness-sdk/setup --cloud");
+    console.log("ℹ OpenClaw requires cloud mode. Run: npx @awareness.market/setup --cloud");
     return 1;
   }
 
@@ -1117,7 +1117,7 @@ async function resolveIdeTargets({ argv, ask }) {
         // IDE is present yet. The daemon URL the user can wire into any MCP
         // client is now printed at the end of runLocalMode regardless.
         console.log("ℹ️  No IDE detected. Continuing with daemon-only setup.");
-        console.log(`   To wire MCP later, run: npx @awareness-sdk/setup --ide <name>`);
+        console.log(`   To wire MCP later, run: npx @awareness.market/setup --ide <name>`);
         console.log(`   Supported: ${getSupportedIdeIds().join(", ")}`);
         return [];
       }

@@ -53,7 +53,7 @@ and `AWARENESS_MEMORY_ID` is NOT `your-memory-id-here`:
   - If no → stop here. Suggest running `/awareness-memory:session-start` instead.
   - If yes → continue to Step 2.
 
-#### 1b. Check ~/.awareness/credentials.json (left by npx @awareness-sdk/setup)
+#### 1b. Check ~/.awareness/credentials.json (left by npx @awareness.market/setup)
 
 Run:
 ```bash
@@ -221,7 +221,7 @@ Ask the user:
 - "Keep waiting" → run the same script again (new device code, fresh 200s window)
 - "Cancel" → stop setup
 
-### Save credentials to ~/.awareness/ (for future reuse by npx @awareness-sdk/setup)
+### Save credentials to ~/.awareness/ (for future reuse by npx @awareness.market/setup)
 
 After getting the api_key:
 ```bash
