@@ -127,7 +127,7 @@ Connects your IDE to the memory daemon:
 
 | Package | Description |
 |---------|-------------|
-| [`@awareness-sdk/local`](https://www.npmjs.com/package/@awareness-sdk/local) | Local daemon that this CLI starts |
+| [`@awareness.market/local`](https://www.npmjs.com/package/@awareness.market/local) | Local daemon that this CLI starts |
 | [`@awareness-sdk/memory-cloud`](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) | TypeScript SDK with interceptors |
 | [`awareness-memory-cloud`](https://pypi.org/project/awareness-memory-cloud/) | Python SDK with interceptors |
 | [`@awareness-sdk/openclaw-memory`](https://www.npmjs.com/package/@awareness-sdk/openclaw-memory) | OpenClaw plugin |

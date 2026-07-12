@@ -61,7 +61,7 @@ function checkDaemonHealth() {
 }
 
 /**
- * Attempt to start the local daemon via `npx @awareness-sdk/local start`.
+ * Attempt to start the local daemon via `npx @awareness.market/local start`.
  * Returns true if spawn succeeded (does NOT wait for readiness).
  */
 async function tryStartDaemon(embeddingLang = "en") {
@@ -89,7 +89,7 @@ async function tryStartDaemon(embeddingLang = "en") {
       child.unref();
     } else {
       // Production: use npx (package published to npm)
-      const child = spawn("npx", ["@awareness-sdk/local", "start"], {
+      const child = spawn("npx", ["@awareness.market/local", "start"], {
         detached: true,
         stdio: "ignore",
         env,
@@ -235,7 +235,7 @@ async function doctorCommand() {
     }
   } else {
     console.log(`  [!!] Local daemon NOT running (port ${LOCAL_DAEMON_PORT})`);
-    console.log(`       Fix: npx @awareness-sdk/local start`);
+    console.log(`       Fix: npx @awareness.market/local start`);
     issues++;
   }
 
@@ -862,14 +862,14 @@ async function runLocalMode({ argv, dryRun, force, ask, isInteractive }) {
 
       if (!started) {
         console.error("Could not start the local daemon.");
-        console.error("Install it first:  npm install -g @awareness-sdk/local");
-        console.error("Or start manually: npx @awareness-sdk/local start");
+        console.error("Install it first:  npm install -g @awareness.market/local");
+        console.error("Or start manually: npx @awareness.market/local start");
         console.error("\nTo use cloud mode instead: npx @awareness-sdk/setup --cloud");
         return 1;
       }
 
       // 4. Wait for daemon to be ready. First-run takes longer because npx
-      // fetches @awareness-sdk/local from npm and compiles better-sqlite3.
+      // fetches @awareness.market/local from npm and compiles better-sqlite3.
       // 90s accommodates that; subsequent runs hit cache and finish in ~2s.
       process.stdout.write("Waiting for daemon to be ready (first install can take ~60s)");
       const pollStart = Date.now();
@@ -891,8 +891,8 @@ async function runLocalMode({ argv, dryRun, force, ask, isInteractive }) {
         // the user's IDE wires up correctly even if daemon comes up late.
         console.warn("⚠️  Daemon did not become ready within 90 seconds.");
         console.warn("   It may still be installing native dependencies in the background.");
-        console.warn("   Check status:   npx @awareness-sdk/local logs");
-        console.warn("   Or start manually: npx @awareness-sdk/local start");
+        console.warn("   Check status:   npx @awareness.market/local logs");
+        console.warn("   Or start manually: npx @awareness.market/local start");
         console.warn("   MCP config will still be written so your IDE can connect once it's up.");
       } else {
         console.log("✓ Local daemon started successfully.\n");

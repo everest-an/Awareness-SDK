@@ -303,7 +303,7 @@ export function buildMcpServerConfig(options = {}) {
         [serverName]: {
           type: "stdio",
           command: "npx",
-          args: ["-y", "@awareness-sdk/local", "mcp"],
+          args: ["-y", "@awareness.market/local", "mcp"],
         },
       },
     };
@@ -649,7 +649,7 @@ function buildMcpServerConfigForIde(ideId, options = {}) {
     const stdioEntry = {
       [typeField]: "stdio",
       command: "npx",
-      args: ["-y", "@awareness-sdk/local", "mcp"],
+      args: ["-y", "@awareness.market/local", "mcp"],
     };
     if (arrayFormat) {
       stdioEntry.name = serverName;
