@@ -7,7 +7,7 @@
   "homepage": "https://awareness.market",
   "repository": {
     "type": "git",
-    "url": "https://github.com/edwinhao/Awareness",
+    "url": "https://github.com/everest-an/Awareness",
     "directory": "sdks/openclaw"
   },
   "type": "module",
