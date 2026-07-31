@@ -31,7 +31,7 @@ function isRecord(value: unknown): value is JsonObject {
 }
 
 /**
- * The four MCP tools that the local daemon implements (`@awareness-sdk/local`).
+ * The four MCP tools that the local daemon implements (`@awareness.market/local`).
  * Anything outside this set must go to the cloud — `mode="local"` clients calling
  * unsupported methods get a `MemoryCloudError("LOCAL_NOT_SUPPORTED")`.
  */
@@ -1622,7 +1622,7 @@ export class MemoryCloudClient {
       throw new MemoryCloudError(
         "LOCAL_NOT_SUPPORTED",
         `${method}() requires cloud mode — the local daemon does not implement this endpoint. ` +
-          `Use mode:"cloud" or mode:"auto", or call the daemon directly via @awareness-sdk/local.`,
+          `Use mode:"cloud" or mode:"auto", or call the daemon directly via @awareness.market/local.`,
       );
     }
   }

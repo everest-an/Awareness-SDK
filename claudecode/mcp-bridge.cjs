@@ -51,7 +51,7 @@ async function ensureDaemon() {
 
   try {
     // Fire-and-forget: start daemon in background
-    const child = spawn('npx', ['-y', '@awareness-sdk/local', 'start'], {
+    const child = spawn('npx', ['-y', '@awareness.market/local', 'start'], {
       detached: true,
       stdio: 'ignore',
       env: { ...process.env, FORCE_COLOR: '0' },

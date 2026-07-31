@@ -265,7 +265,7 @@ export function registerSetupMode(api: PluginApi, baseUrl: string = DEFAULT_BASE
           },
           {
             method: "Local daemon (recommended for privacy on desktop)",
-            command: "npx @awareness-sdk/local start",
+            command: "npx @awareness.market/local start",
             description:
               "Start a local Awareness daemon. Memory stays on your machine. No account needed.",
           },
@@ -420,7 +420,7 @@ async function ensureLocalDaemon(
   api.logger.info("Local daemon not running, attempting auto-start...");
   try {
     const { spawn } = await import("child_process");
-    const child = spawn("npx", ["-y", "@awareness-sdk/local", "start"], {
+    const child = spawn("npx", ["-y", "@awareness.market/local", "start"], {
       cwd: process.cwd(),
       detached: true,
       stdio: "ignore",

@@ -148,7 +148,7 @@ async function resolveEndpoint(config) {
 
   try {
     const { spawn } = require("child_process");
-    const child = spawn("npx", ["-y", "@awareness-sdk/local", "start"], {
+    const child = spawn("npx", ["-y", "@awareness.market/local", "start"], {
       cwd: process.cwd(),
       detached: true,
       stdio: "ignore",
@@ -175,7 +175,7 @@ async function resolveEndpoint(config) {
     // Daemon failed to start within 6 seconds
     process.stderr.write(
       "[awareness] Local daemon failed to start. Possible causes:\n" +
-      "  - missing 'better-sqlite3' native dependency (run: npm install -g @awareness-sdk/local)\n" +
+      "  - missing 'better-sqlite3' native dependency (run: npm install -g @awareness.market/local)\n" +
       "  - port 37800 already in use\n" +
       "  Falling back to cloud mode...\n"
     );

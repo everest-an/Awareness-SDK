@@ -21,17 +21,17 @@ export interface MemoryCloudClientConfig {
   /**
    * Deployment mode:
    *   - `"cloud"` (default): Awareness Cloud at `https://awareness.market/api/v1`.
-   *   - `"local"`: route through the `@awareness-sdk/local` daemon at `http://localhost:37800`
+   *   - `"local"`: route through the `@awareness.market/local` daemon at `http://localhost:37800`
    *     via its MCP JSON-RPC endpoint. **Only the four core MCP tools are supported**
    *     (`init`, `recall`, `record`, `lookup`). Cloud-only methods (`createMemory`,
    *     `listMemories`, `getSkills`, …) throw `MemoryCloudError` in this mode — call them
-   *     against the cloud or use `@awareness-sdk/local` directly.
+   *     against the cloud or use `@awareness.market/local` directly.
    *   - `"auto"`: try the local daemon `/healthz` first; on success use the daemon for the
    *     four supported tools and the cloud for everything else; on failure use cloud only.
    */
   mode?: "cloud" | "local" | "auto";
   /**
-   * URL of the `@awareness-sdk/local` daemon. Default: `http://localhost:37800`.
+   * URL of the `@awareness.market/local` daemon. Default: `http://localhost:37800`.
    * NOTE: this is the daemon root, NOT a `/api/v1` path. The SDK appends `/mcp` for
    * JSON-RPC calls and `/healthz` for the auto-mode probe.
    */

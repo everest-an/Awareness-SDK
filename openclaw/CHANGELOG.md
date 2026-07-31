@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.18] - 2026-07-31
+
+### Fixed — local daemon auto-start pointed at an abandoned npm package
+
+- The `npx @awareness-sdk/local start` calls (auto-start on daemon-not-running,
+  and the setup-instructions text) were still targeting the old npm scope,
+  which stopped receiving updates after 0.11.6. Every OpenClaw user relying on
+  auto-start was silently stuck on a stale, unmaintained daemon build. Now
+  points at `@awareness.market/local`, the actively maintained package
+  (currently 0.12.0, which also fixes a duplicate-daemon-process bug).
+
 ## [0.6.16] - 2026-04-19
 
 ### Added — F-059/F-060 passthrough

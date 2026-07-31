@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.11] - 2026-07-31
+
+### Fixed — local daemon auto-start pointed at an abandoned npm package
+
+- `mcp-stdio.cjs` and the shared `scripts/shared.js` fallback both spawned
+  `npx @awareness-sdk/local start` — that npm scope stopped receiving
+  updates after 0.11.6. Now points at `@awareness.market/local`, the
+  actively maintained package.
+
 ## [0.3.10] - 2026-04-19
 
 ### Added — F-059/F-060 protocol updates

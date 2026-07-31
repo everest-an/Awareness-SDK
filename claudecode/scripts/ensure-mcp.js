@@ -13,7 +13,7 @@ const MCP_SERVER_KEY = 'awareness-memory';
 const MCP_CONFIG = {
   type: 'stdio',
   command: 'npx',
-  args: ['-y', '@awareness-sdk/local', 'mcp'],
+  args: ['-y', '@awareness.market/local', 'mcp'],
 };
 
 function ensureMcpConfig(projectDir) {
