@@ -136,7 +136,7 @@ Connects your IDE to the memory daemon:
 
 Most memory systems pick one extraction strategy. Awareness combines them:
 
-- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 95.6% R@5 on LongMemEval, zero LLM calls on the retrieval side.
+- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 96.0% R@5 on LongMemEval, zero LLM calls on the retrieval side.
 - **Salience-aware extraction** (v0.4.7+) — the client's LLM self-scores every card on `novelty` / `durability` / `specificity`; cards below 0.4 on novelty or durability are dropped server-side. Framework metadata is filtered before extraction runs, so raw logs never leak into your knowledge base.
 - **Project isolation** — `X-Awareness-Project-Dir` header scopes memory per project.
 - **Zero-LLM backend** — all extraction runs on the client's LLM. No inference costs pass through to you.

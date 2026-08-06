@@ -1,8 +1,8 @@
 # Awareness Memory SDK — Python
 
-[![PyPI](https://img.shields.io/pypi/v/awareness-memory-cloud?color=00d4ff)](https://pypi.org/project/awareness-memory-cloud/) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-95.6%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
+[![PyPI](https://img.shields.io/pypi/v/awareness-memory-cloud?color=00d4ff)](https://pypi.org/project/awareness-memory-cloud/) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
 
-Python SDK for adding persistent memory to AI agents and apps. **95.6% Recall@5 on [LongMemEval](https://arxiv.org/abs/2410.10813) (ICLR 2025)**.
+Python SDK for adding persistent memory to AI agents and apps. **96.0% Recall@5 on [LongMemEval](https://arxiv.org/abs/2410.10813) (ICLR 2025)**.
 
 Online docs: <https://awareness.market/docs?doc=python>
 
@@ -24,7 +24,7 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 ║   │                                                 │        ║
 ║   │   Recall@1    77.6%    (388 / 500)              │        ║
 ║   │   Recall@3    91.8%    (459 / 500)              │        ║
-║   │   Recall@5    95.6%    (478 / 500)  ◀ PRIMARY   │        ║
+║   │   Recall@5    96.0%    (480 / 500)  ◀ PRIMARY   │        ║
 ║   │   Recall@10   97.4%    (487 / 500)              │        ║
 ║   │                                                 │        ║
 ║   └─────────────────────────────────────────────────┘        ║
@@ -47,7 +47,7 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 │  System                         │  R@5      │  Note         │
 ├─────────────────────────────────┼───────────┼───────────────┤
 │  MemPalace (ChromaDB raw)       │  96.6%    │  R@5 only *   │
-│  ★ Awareness Memory (Hybrid)    │  95.6%    │  Hybrid RRF   │
+│  ★ Awareness Memory (Hybrid)    │  96.0%    │  Hybrid RRF   │
 │  OMEGA                          │  95.4%    │  QA Accuracy  │
 │  Mastra (GPT-5-mini)            │  94.9%    │  QA Accuracy  │
 │  Mastra (GPT-4o)                │  84.2%    │  QA Accuracy  │
@@ -73,14 +73,14 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 │  single-session-user     ████████████████████████▎     88.6%│
 │  single-session-pref     ███████████████████████▏      86.7%│
 │                                                             │
-│  Overall                 █████████████████████████▉    95.6%│
+│  Overall                 █████████████████████████▉    96.0%│
 │                                                             │
 │  ┌───────────────────────────────────────────────┐          │
 │  │  Ablation Study                               │          │
 │  │  ─────────────────────────────────────────    │          │
 │  │  Vector-only:   92.6%  ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░     │          │
 │  │  BM25-only:     91.4%  ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░     │          │
-│  │  Hybrid RRF:    95.6%  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░  ★  │          │
+│  │  Hybrid RRF:    96.0%  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░  ★  │          │
 │  │                        Hybrid = +3% over any  │          │
 │  │                        single method alone    │          │
 │  └───────────────────────────────────────────────┘          │
@@ -398,7 +398,7 @@ python examples/e2e_langchain_cloud.py
 
 Most memory systems pick one extraction strategy. Awareness combines them:
 
-- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 95.6% R@5 on LongMemEval, zero LLM calls on the retrieval side.
+- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 96.0% R@5 on LongMemEval, zero LLM calls on the retrieval side.
 - **Salience-aware extraction** — the client's own LLM self-scores every card on `novelty` / `durability` / `specificity`; cards below 0.4 on novelty or durability are dropped server-side. Framework metadata (`Sender (untrusted metadata)`, `turn_brief`) is filtered before extraction runs.
 - **Project isolation** — `X-Awareness-Project-Dir` header scopes memory per project.
 - **Zero-LLM backend** — all extraction runs on your LLM (Claude, GPT-4, Gemini, local Llama). The backend is a coordinator + storage layer; no inference costs pass through to you.

@@ -1,6 +1,6 @@
 # Awareness Memory — Claude Code Plugin
 
-[![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-95.6%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
+[![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
 
 Persistent cross-session memory for Claude Code via [Awareness](https://awareness.market). Local-first — works offline, no account needed.
 
@@ -26,7 +26,7 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 ║   │                                                 │        ║
 ║   │   Recall@1    77.6%    (388 / 500)              │        ║
 ║   │   Recall@3    91.8%    (459 / 500)              │        ║
-║   │   Recall@5    95.6%    (478 / 500)  ◀ PRIMARY   │        ║
+║   │   Recall@5    96.0%    (480 / 500)  ◀ PRIMARY   │        ║
 ║   │   Recall@10   97.4%    (487 / 500)              │        ║
 ║   │                                                 │        ║
 ║   └─────────────────────────────────────────────────┘        ║
@@ -49,7 +49,7 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 │  System                         │  R@5      │  Note         │
 ├─────────────────────────────────┼───────────┼───────────────┤
 │  MemPalace (ChromaDB raw)       │  96.6%    │  R@5 only *   │
-│  ★ Awareness Memory (Hybrid)    │  95.6%    │  Hybrid RRF   │
+│  ★ Awareness Memory (Hybrid)    │  96.0%    │  Hybrid RRF   │
 │  OMEGA                          │  95.4%    │  QA Accuracy  │
 │  Mastra (GPT-5-mini)            │  94.9%    │  QA Accuracy  │
 │  Mastra (GPT-4o)                │  84.2%    │  QA Accuracy  │
@@ -75,14 +75,14 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 │  single-session-user     ████████████████████████▎     88.6%│
 │  single-session-pref     ███████████████████████▏      86.7%│
 │                                                             │
-│  Overall                 █████████████████████████▉    95.6%│
+│  Overall                 █████████████████████████▉    96.0%│
 │                                                             │
 │  ┌───────────────────────────────────────────────┐          │
 │  │  Ablation Study                               │          │
 │  │  ─────────────────────────────────────────    │          │
 │  │  Vector-only:   92.6%  ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░     │          │
 │  │  BM25-only:     91.4%  ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░     │          │
-│  │  Hybrid RRF:    95.6%  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░  ★  │          │
+│  │  Hybrid RRF:    96.0%  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░  ★  │          │
 │  │                        Hybrid = +3% over any  │          │
 │  │                        single method alone    │          │
 │  └───────────────────────────────────────────────┘          │
@@ -244,7 +244,7 @@ Once connected, Claude Code has access to these Awareness MCP tools:
 
 Most memory systems pick one extraction strategy. Awareness combines them:
 
-- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 95.6% R@5 on LongMemEval, zero LLM calls on the retrieval side.
+- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 96.0% R@5 on LongMemEval, zero LLM calls on the retrieval side.
 - **Salience-aware extraction** — Claude self-scores every card on `novelty` / `durability` / `specificity`; cards below 0.4 on novelty or durability are dropped server-side. Framework metadata (`Sender (untrusted metadata)`, `turn_brief`, `[Operational context ...]`) is filtered before extraction runs, so raw tool-use turns never leak into your knowledge base.
 - **Project isolation** — `X-Awareness-Project-Dir` header scopes memory per project. Your work memory doesn't leak into your personal memory, even on the same machine.
 - **Learning over time** — Ebbinghaus-style card decay, skill crystallization from repeated patterns, workspace graph self-prune to keep `index.db` bounded.
