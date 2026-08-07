@@ -17,9 +17,36 @@
   <a href="https://awareness.market/docs">Docs</a> · <a href="https://awareness.market">Cloud</a> · <a href="https://discord.com/invite/nMDrT538Qa">Discord</a> · <a href="#quick-start">Quick Start</a>
 </p>
 
+<p align="center">
+  <a href="https://arxiv.org/abs/2410.10813"><img src="https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen" alt="LongMemEval R@5 96.0%"/></a>
+  <a href="https://awareness.market/sdk-docs/LONGMEMEVAL.md"><img src="https://img.shields.io/badge/benchmark-daemon_path_reproducible-blue" alt="Reproducible daemon-path benchmark"/></a>
+  <a href="https://awareness.market/sdk-docs/ALTERNATIVES.md"><img src="https://img.shields.io/badge/vs_Mem0%2C_Zep%2C_MemPalace-factual_comparison-orange" alt="Factual comparison vs alternatives"/></a>
+</p>
+
+
 ---
 
 ## Why Awareness?
+
+### Benchmarked, not boasted
+
+**96.0% Recall@5 on [LongMemEval](https://arxiv.org/abs/2410.10813)** — measured through the **real local-daemon retrieval pipeline** (`unifiedCascadeSearch` + production E5 embeddings + live SQLite), not an independent harness. Reproducible on any machine: `benchmarks/longmemeval/run_f053_daemon_path.mjs`.
+
+| System | LongMemEval R@5 | Local / zero-API | Notes |
+| --- | ---: | --- | --- |
+| **Awareness (daemon path)** | **96.0%** | Yes | Reproducible, real production pipeline |
+| MemPalace | 96.6% | Yes | R@5 only, raw verbatim |
+| Mem0 | 49.0% (OSS) / 93.4% (self-reported) | Graph = paid | Independent tests differ wildly |
+| Zep | 63.8% | SaaS | Temporal graph, cloud-focused |
+
+> Honest comparisons only — see [Awareness vs. Alternatives](https://awareness.market/sdk-docs/ALTERNATIVES.md) for the full factual breakdown.
+
+### What makes it different from a memory store
+
+- **Workflow rules injection** — writes rules into your IDE config (CLAUDE.md, .cursor/rules/) so the agent *automatically* initializes memory, recalls before work, and records after changes. No manual orchestration.
+- **Structured knowledge, not snippets** — 13 categories: decisions, problem-solutions, workflows, pitfalls, skills, preferences. Conflict detection + dedup built in.
+- **Local-first, zero account** — `npx @awareness.market/setup`, data stays on your machine, works offline. Cloud sync optional.
+
 
 AI agents forget everything when a session ends. Your agent spent hours making architectural decisions, fixing bugs, and planning next steps — and the next session starts from zero.
 

@@ -1,6 +1,6 @@
 # @awareness.market/openclaw-memory
 
-[![npm](https://img.shields.io/npm/v/@awareness.market/openclaw-memory?color=7b68ee)](https://www.npmjs.com/package/@awareness.market/openclaw-memory) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-95.6%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
+[![npm](https://img.shields.io/npm/v/@awareness.market/openclaw-memory?color=7b68ee)](https://www.npmjs.com/package/@awareness.market/openclaw-memory) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
 
 OpenClaw memory plugin backed by Awareness Memory Cloud.
 
@@ -8,13 +8,13 @@ Online docs: <https://awareness.market/docs?doc=openclaw>
 
 ## Benchmark: LongMemEval (ICLR 2025)
 
-Awareness Memory achieves **95.6% Recall@5** on [LongMemEval](https://arxiv.org/abs/2410.10813) (ICLR 2025) — 500 human-curated questions, zero LLM calls, hybrid BM25+Vector retrieval. [Full results →](https://github.com/everest-an/Awareness/tree/main/benchmarks/longmemeval)
+Awareness Memory achieves **96.0% Recall@5** on [LongMemEval](https://arxiv.org/abs/2410.10813) (ICLR 2025) — 500 human-curated questions, zero LLM calls, hybrid BM25+Vector retrieval. [Full results →](https://github.com/everest-an/Awareness/tree/main/benchmarks/longmemeval)
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
 ║   Awareness Memory — LongMemEval Benchmark Results           ║
 ║                                                              ║
-║   Recall@1    77.6%       Recall@5    95.6%  ◀ PRIMARY       ║
+║   Recall@1    77.6%       Recall@5    96.0%  ◀ PRIMARY       ║
 ║   Recall@3    91.8%       Recall@10   97.4%                  ║
 ║                                                              ║
 ║   Method:     Hybrid RRF (BM25 + Vector)                     ║
@@ -29,7 +29,7 @@ Awareness Memory achieves **95.6% Recall@5** on [LongMemEval](https://arxiv.org/
 │  System                         │  R@5      │  Note         │
 ├─────────────────────────────────┼───────────┼───────────────┤
 │  MemPalace (ChromaDB raw)       │  96.6%    │  R@5 only *   │
-│  ★ Awareness Memory (Hybrid)    │  95.6%    │  Hybrid RRF   │
+│  ★ Awareness Memory (Hybrid)    │  96.0%    │  Hybrid RRF   │
 │  OMEGA                          │  95.4%    │  QA Accuracy  │
 │  Supermemory                    │  81.6%    │  QA Accuracy  │
 │  Zep / Graphiti                 │  71.2%    │  QA Accuracy  │
@@ -174,7 +174,7 @@ You should see `openclaw-memory` or `awareness-memory` loaded.
 
 Most memory systems pick one extraction strategy. Awareness combines them:
 
-- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 95.6% R@5 on LongMemEval, zero LLM calls on the retrieval side.
+- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 96.0% R@5 on LongMemEval, zero LLM calls on the retrieval side.
 - **Salience-aware extraction** (v0.6.12+) — the agent's LLM self-scores every card on `novelty` / `durability` / `specificity`; cards below 0.4 on novelty or durability are dropped server-side. Framework metadata (`Sender (untrusted metadata)`, `turn_brief`, `[Operational context ...]`) is filtered before extraction runs, so raw log turns never leak into your knowledge base.
 - **Project isolation** — `X-Awareness-Project-Dir` header scopes memory per project. Agents working on different projects from the same OpenClaw instance don't cross-contaminate.
 - **Learning over time** — Ebbinghaus-style card decay, skill crystallization from repeated patterns (F-032 / F-034), workspace graph self-prune to keep `index.db` bounded.
