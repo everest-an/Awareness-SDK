@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import fs from 'node:fs';
 import http from 'node:http';
 import { assertSafeWorkspaceRoot } from './core/workspace-root.mjs';
 import {
@@ -176,28 +177,60 @@ export async function ensureDaemon(port, projectDir) {
     throw new Error(`Failed to switch daemon workspace to ${safeProjectDir}`);
   }
 
-  log('Daemon not reachable — starting...');
-  const { args } = buildDaemonStartArgs(safeProjectDir);
-  const child = spawn(process.execPath, args, {
-    stdio: 'ignore',
-    detached: true,
-    env: { ...process.env, PORT: String(port) },
-  });
-  child.unref();
+  // Startup dedup lock: only one process may spawn the daemon at a time.
+  // This prevents concurrent ensureDaemon() calls from spawning multiple instances.
+  const awarenessDir = join(safeProjectDir, '.awareness');
+  fs.mkdirSync(awarenessDir, { recursive: true });
+  const lockPath = join(awarenessDir, 'mcp-starting.lock');
 
-  // Poll healthz for up to 15 seconds
-  const deadline = Date.now() + 15_000;
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 500));
-    if (await checkHealth(port)) {
-      log('Daemon is ready.');
-      return;
+  let lockAcquired = false;
+  try {
+    const lockFd = fs.openSync(lockPath, 'wx');
+    fs.writeSync(lockFd, String(process.pid));
+    fs.closeSync(lockFd);
+    lockAcquired = true;
+  } catch (e) {
+    if (e.code !== 'EEXIST') {
+      // Unexpected error — fall through to spawn anyway
+      log(`Warning: Failed to acquire startup lock: ${e.message}`);
     }
   }
-  throw new Error(
-    `Daemon did not become healthy within 15s (port ${port}). ` +
-    `Try running "npx awareness-local start" manually.`,
-  );
+
+  try {
+    if (lockAcquired) {
+      // We hold the lock — proceed to spawn the daemon
+      log('Daemon not reachable — starting...');
+      const { args } = buildDaemonStartArgs(safeProjectDir);
+      const child = spawn(process.execPath, args, {
+        stdio: 'ignore',
+        detached: true,
+        env: { ...process.env, PORT: String(port) },
+      });
+      child.unref();
+    } else {
+      // Another process is starting — just wait for it to become healthy
+      log('Another process is starting the daemon — waiting...');
+    }
+
+    // Poll healthz for up to 15 seconds
+    const deadline = Date.now() + 15_000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 500));
+      if (await checkHealth(port)) {
+        log('Daemon is ready.');
+        return;
+      }
+    }
+    throw new Error(
+      `Daemon did not become healthy within 15s (port ${port}). ` +
+      `Try running "npx awareness-local start" manually.`,
+    );
+  } finally {
+    // Release lock if we acquired it
+    if (lockAcquired) {
+      try { fs.unlinkSync(lockPath); } catch { /* ignore */ }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -481,6 +514,42 @@ export async function startStdioMcp({ port = 37800, projectDir } = {}) {
   registerTools(server, port, safeProjectDir);
 
   const transport = new StdioServerTransport();
+
+  // --- Lifecycle guard: never outlive the client (F-085 · anti-zombie) --------
+  // A stdio MCP server's stdin IS its lifeline. When the MCP client (Claude Code,
+  // Cursor, …) disconnects, stdin hits EOF and/or the transport closes. On
+  // Windows a `cmd /c npx …` shim orphans this node process and breaks SIGTERM
+  // propagation, so WITHOUT an explicit exit the proxy runs forever — every
+  // closed session leaves a CPU-burning zombie that accumulates over days.
+  // Exit on every disconnect signal we can observe.
+  let exiting = false;
+  let parentWatch = null;
+  const shutdown = (reason) => {
+    if (exiting) return;
+    exiting = true;
+    if (parentWatch) { try { clearInterval(parentWatch); } catch { /* noop */ } }
+    log(`stdio MCP shutting down (${reason})`);
+    Promise.resolve(server.close?.()).catch(() => {}).finally(() => process.exit(0));
+    // Hard backstop if close() hangs.
+    setTimeout(() => process.exit(0), 1000).unref();
+  };
+
+  transport.onclose = () => shutdown('transport closed');
+  process.stdin.on('end', () => shutdown('stdin end'));
+  process.stdin.on('close', () => shutdown('stdin close'));
+  process.stdin.on('error', () => shutdown('stdin error'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  // Windows belt-and-suspenders: `cmd /c npx` can orphan us so stdin never EOFs.
+  // Poll the parent PID — signal 0 throws once the parent is gone → we exit.
+  const parentPid = process.ppid;
+  parentWatch = setInterval(() => {
+    if (!parentPid || parentPid <= 1) return;
+    try { process.kill(parentPid, 0); } catch { shutdown('parent process gone'); }
+  }, 5000);
+  parentWatch.unref();
+
   await server.connect(transport);
 
   log('stdio MCP proxy connected and ready.');

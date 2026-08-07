@@ -1,5 +1,110 @@
 # Changelog
 
+## [0.12.1] - 2026-08-06
+
+### Added — 同步可见性批次 A-D + 检索精确性
+
+**用户看到的变化**：
+- **推送不再重复**：卡片推送携带 `message_id`，云端幂等去重。响应丢失后的重试不会产生重复卡片（W1）。
+- **同步状态更可信**：修复 12 个测试失败（ship-gate 首次全绿 1497/0）——含 FTS/embedding 对 "step 1" 类精确查询的排序修复。
+- **卡片来源可追溯**：`card_provenance` 旁挂表记录来源权威（user_input > auto_extraction > inference），为冲突检测打基础（W3）。
+- **后台预取**：PeerPrefetcher 每 60s 预取云端卡片到本地，`recall()` 零改动（W4）。
+- **LongMemEval 真实数据**：daemon 路径 R@5 = 96.0%（超基线 95.6%），全部指标上升。
+
+### Changed
+- 检索：查询含"词+数字"短语（step 1 / v2）时，标题精确命中卡决定性排 Top-1
+- 检索：session enrichment 跳过含序号的明确查询（避免污染）
+- benchmark：模型对齐 daemon（e5-small）+ UTF-8 读取
+
+### Internal
+- `sync-outbox` 表修正（user_id 隔离 / ref_id 替代 envelope_json）
+- `ingest_deliveries` 幂等表 + 7 天 TTL 清理
+- `card_provenance` 旁挂表（本地 SQLite + 云端 PostgreSQL）
+- `peer-prefetcher.mjs` 独立预取模块
+
+## [0.12.0] - 2026-07-31
+
+### Fixed — duplicate daemon processes on concurrent MCP connections
+
+- `mcp-stdio.mjs`'s `ensureDaemon()` had no lock, so multiple MCP clients
+  connecting around the same time (e.g. several Claude Code sessions open on
+  the same project) could each detect "daemon not reachable" and spawn their
+  own background daemon process, all pinning CPU indefinitely. Added the same
+  file-lock dedup pattern already used by `bin/awareness-local.mjs`
+  (`.awareness/mcp-starting.lock`) — only the process holding the lock spawns;
+  the rest wait for the healthz check to pass.
+
+### Changed — anchoring standard finalized as **ERC-8350**
+
+- The agent-memory-state anchoring standard is now **ERC-8350** (finalized number;
+  the `standard` field written into each on-chain commitment payload now reads
+  `ERC-8350`). The protocol math (typehashes, commitments, transition ids) is
+  unchanged and still matches the cross-language golden vector byte-for-byte.
+- **Upgrade note:** anchors published by 0.11.9 carry the earlier pre-release
+  identifier and are not interchangeable with 0.12.0 anchors. Re-anchor if you
+  need a uniform standard tag across your history.
+
+### Internal
+
+- Repository/account references migrated to the current owner
+  (`github.com/everest-an/Awareness`).
+
+## [0.11.9] - 2026-07-28
+
+### Added — your memory can now have a verifiable on-chain history (opt-in)
+
+- **ERC-8350 memory anchoring.** Turn it on and your knowledge cards get a
+  tamper-evident version history on Ethereum — while the memory itself never
+  leaves your machine. Enable `anchoring` in `.awareness/config.json`, then:
+  - `awareness-local anchor status` — what is queued, and what it will cost
+  - `awareness-local anchor flush` — publish it (prompts for your key, hidden input)
+- **Only 32-byte commitments go on chain.** Card text, payloads and salts stay in
+  `.awareness/witness/` (gitignored) and are never transmitted anywhere.
+- **The chain is never a hard dependency.** With anchoring enabled but the RPC
+  unreachable or no wallet configured, every memory feature works exactly as
+  before; the queue simply accumulates until you flush it.
+- **Your private key never touches the daemon.** Config stores only the controller
+  address. Signing happens inside the short-lived `anchor flush` process, which
+  reads the on-chain result back and refuses to confirm unless it matches what was
+  computed locally.
+- **Insights UI** shows an anchor strip in the sidebar and a per-card badge
+  (solid = anchored, hollow = queued). Hidden entirely when anchoring is off.
+
+Spec: [ERC-8350](https://ethereum-magicians.org/t/agent-memory-state/29098) ·
+reference implementation `AwareLiquid/ERC-AWAR`.
+
+## [0.11.8] - 2026-07-12
+
+### Changed — package moved to `@awareness.market/local`
+
+- The package is now published as **`@awareness.market/local`** (was
+  `@awareness-sdk/local`). Install/run with `npx @awareness.market/local …`.
+  CLI help text and README updated to the new name. No functional change from
+  0.11.7 (R1 gate + anti-zombie lifecycle guard carried over).
+
+## [0.11.7] - 2026-07-05
+
+### Fixed — no more CPU-burning zombie MCP processes
+
+- The `awareness-local mcp` stdio proxy now **exits when the client disconnects**
+  (stdin EOF / transport close / SIGTERM / SIGINT), instead of running forever.
+  Previously every closed MCP session (Claude Code / Cursor) left an orphaned
+  node process — on Windows the `cmd /c npx` shim breaks signal propagation, so
+  they accumulated into background CPU load over days. Added a Windows parent-PID
+  watchdog as a belt-and-suspenders guard for the orphan case. Proxy now exits
+  ~400ms after disconnect (`test/mcp-stdio-lifecycle.test.mjs`, real-spawn).
+
+### Security (F-085 · R1) — a same-machine web page can no longer read your local memories
+
+- `GET /api/v1/prompt/inject` (previously no-key) now requires a trusted Origin
+  (the browser extension / a whitelisted chat site) or a valid bridge token. An
+  anonymous cross-origin page gets `403 forbidden_origin`; native host-LLM
+  runtimes (no Origin) and curl are unaffected. Escape hatch for rare web-based
+  host-LLMs on a non-whitelisted Origin: `AWARENESS_PROMPT_INJECT_OPEN=1`.
+- Refactored the shared trust gate (`isBridgeRequestTrusted`) so record + inject
+  share one code path; no behavior change to the write endpoint.
+- Tests: `test/prompt-inject-auth.test.mjs` (6) + T9 fresh-install smoke.
+
 ## [0.11.6] - 2026-04-29
 
 ### Fixed — docs-only onboarding, workspace UI loading, and graph embedding throttling
@@ -131,7 +236,7 @@ Free for everyone — no payment required to draft or publish.
   schema (synthesize → submit).
 - `tool-bridge.mjs`: dispatches the tool through the engine.
 
-Requires cloud auth (`npx @awareness-sdk/setup --cloud`) since drafts post
+Requires cloud auth (`npx @awareness.market/setup --cloud`) since drafts post
 to the Marketplace backend. Local-only users see a friendly error message
 prompting setup.
 
@@ -182,7 +287,7 @@ changes.
 ## [0.9.12] - 2026-04-21
 
 ### Fixed — wiki "click topic → click card" several-second freeze
-On real workspaces (~2.5k cards) the AwarenessClaw wiki tab took 1-3
+On real workspaces (~2.5k cards) the OCT-Agent wiki tab took 1-3
 seconds to render a card detail and `/healthz` would briefly fall over
 during the wait. Two compounding causes:
 - `apiGetKnowledgeCard` (MOC card path) ran **one full-table
@@ -227,7 +332,7 @@ output edges are byte-identical** — only the CPU schedule changes.
 ## [0.9.11] - 2026-04-20
 
 ### Fixed — workspace switch hang / log flood after 2+ consecutive switches
-Users reported AwarenessClaw freezing after switching workspaces more than
+Users reported OCT-Agent freezing after switching workspaces more than
 twice in a row. Root cause was a family of fire-and-forget background
 pipelines that kept writing to an indexer **after** `switchProject()` had
 closed its SQLite DB, producing thousands of
@@ -279,7 +384,7 @@ after `await`.
 ## [0.9.10] - 2026-04-19
 
 ### Fixed — Wiki tag topic renders blank after "building index" spinner
-- AwarenessClaw sidebar lists tag aggregations (ids like `tag_<name>`) as
+- OCT-Agent sidebar lists tag aggregations (ids like `tag_<name>`) as
   topics. The client's detail view used to client-side-filter the preloaded
   50-card snapshot for members. When a tag's member cards lived outside
   the top-50 (older cards), the filter yielded zero → retried 4× → showed
@@ -288,7 +393,7 @@ after `await`.
 - Fix: `GET /api/v1/knowledge/<id>` now recognises `tag_<name>` pseudo-ids
   and runs the same SQL tag-LIKE query `_countMocMembers` uses, returning
   a `members[]` array backed by the full SQLite table (up to 500). The
-  AwarenessClaw client's `WikiContentArea.tsx` falls through to this
+  OCT-Agent client's `WikiContentArea.tsx` falls through to this
   endpoint when client-side match returns zero.
 - Tests: `test/api-tag-pseudo-topic.test.mjs` — 4/4.
 
@@ -334,7 +439,7 @@ after `await`.
 - The handler returned the full `Record<path, entry>` map on every
   request. Power users who had navigated many projects accumulated
   multi-thousand-entry registries, ballooning the payload and
-  slowing the AwarenessClaw Memory tab's initial load.
+  slowing the OCT-Agent Memory tab's initial load.
 - Fix: accept `?limit=<N>` (capped at 500) and `?q=<substr>`. When
   either is present the response shape becomes
   `{ workspaces: [{ path, …entry }], total }`, sorted by
@@ -696,7 +801,7 @@ Changes:
 ### Scope note
 - F-055 bug A/C/D, F-056 Phase 1+2, F-057 Phase 0 — all landed
   together. F-055 bug B already shipped in
-  `@awareness-sdk/openclaw-memory@0.6.14`. F-055b (AwarenessClaw
+  `@awareness.market/openclaw-memory@0.6.14`. F-055b (OCT-Agent
   desktop workspace) is code-only (DMG not rebuilt in this release).
 - Backend Python prompts (`extraction_v1.py`,
   `extraction_v2_pass2_synthesis.py`) now use the SSOT markers but no
@@ -731,17 +836,17 @@ Changes:
 - All 1019 existing tests still pass (0 regressions).
 
 ### Client pairing
-- This ships in tandem with `AwarenessClaw` desktop `memory-client.ts`
+- This ships in tandem with `OCT-Agent` desktop `memory-client.ts`
   `applyProjectDirHeader()` — ASCII paths keep the legacy header, CJK/emoji
   paths switch to B64, encoding failures silently degrade to "no header"
-  instead of crashing. See `AwarenessClaw/packages/desktop/CHANGELOG.md`.
+  instead of crashing. See `OCT-Agent/packages/desktop/CHANGELOG.md`.
 
 ## [0.8.1] - 2026-04-18
 
-### Fixed — AwarenessClaw desktop envelope leaking into card titles
+### Fixed — OCT-Agent desktop envelope leaking into card titles
 - **User-reported bug**: screenshot audit showed knowledge-card titles
   literally starting with `Request: 你现在能做什么?` — the OpenClaw-style
-  `Request: <user>\nResult: <assistant>` envelope from AwarenessClaw
+  `Request: <user>\nResult: <assistant>` envelope from OCT-Agent
   desktop's chat turn_briefs was leaking straight into auto-generated
   card titles.
 - **Root cause**: `daemon._remember()` called `classifyNoiseEvent()` to
@@ -759,7 +864,7 @@ Changes:
 - `test/remember-envelope-strip.test.mjs` — 7 unit tests (4 on cleanContent
   regex + 3 on daemon._remember integration path). All pass.
 - `test/remember-envelope-scorecard.test.mjs` — realistic 8-turn
-  AwarenessClaw batch, measures:
+  OCT-Agent batch, measures:
   - Clean titles:      8/8 = 100%
   - Clean contents:    8/8 = 100%
   - Body preserved:    8/8 = 100%
@@ -771,7 +876,7 @@ Changes:
   (+7 new vs 0.8.0 baseline).
 
 ### Compatibility
-- Pure daemon-side fix, no schema change, no new API. AwarenessClaw
+- Pure daemon-side fix, no schema change, no new API. OCT-Agent
   desktop keeps sending the same `Request:/Result:` envelope — daemon
   now silently strips it before persistence. No client update required.
 
@@ -919,7 +1024,7 @@ Changes:
   turn payloads in `Request: <metadata>` / `Result: <metadata>` envelopes. The
   envelope prefix made every framework-metadata block slip past the filter
   and end up as a `problem_solution` card titled `"Request: Sender
-  (untrusted metadata): { label: AwarenessClaw Desktop... }"`. Fix:
+  (untrusted metadata): { label: OCT-Agent Desktop... }"`. Fix:
   `SYSTEM_METADATA_PREFIXES` is now matched against both the raw trim and a
   copy with the `Request:` / `Result:` / `Send:` / `Received:` / `User:` /
   `Assistant:` / `Tool:` envelope stripped. `turn_brief` and `[turn_brief`
@@ -1026,7 +1131,7 @@ on the legacy framing and will be synced in 0.7.4.
 - **Device-auth links are hardened in both onboarding and the Sync panel** — the UI now prefers `verification_url` when present, shows a retry state on upstream 502s, and defangs unsafe schemes like `javascript:` to `about:blank` instead of opening a broken or dangerous URL.
 
 ### Tested
-- `bash scripts/ship-gate.sh` — passed (L1 guards, `sdks/local` integration suite, AwarenessClaw desktop Vitest coverage, L3 device-auth failure tests, L4 zero-mock journeys).
+- `bash scripts/ship-gate.sh` — passed (L1 guards, `sdks/local` integration suite, OCT-Agent desktop Vitest coverage, L3 device-auth failure tests, L4 zero-mock journeys).
 - `node --test test/f031-alignment.test.mjs`
 - `node --test test/session-context-recall.test.mjs test/recall-context-comparison.test.mjs test/memory-store-compat.test.mjs`
 
@@ -1072,7 +1177,7 @@ on the legacy framing and will be synced in 0.7.4.
 - **Dashboard sidebar now shows ~30 topics, not 1** — `/api/v1/topics` used to fall back to tag-hotness only when **no** MOC existed. With even one MOC present the fallback was suppressed and all other tag-based themes disappeared. Now MOCs + unique tag topics are merged (dedup by tag name).
 
 ### Added — shipping gate methodology
-- `CLAUDE.md` gains a full "上线门禁方法论：5 层测试金字塔" section (Testing Trophy + chaos + mutation + zero-mock journey). Same methodology appended to `AwarenessClaw/CLAUDE.md`.
+- `CLAUDE.md` gains a full "上线门禁方法论：5 层测试金字塔" section (Testing Trophy + chaos + mutation + zero-mock journey). Same methodology appended to `OCT-Agent/CLAUDE.md`.
 - `scripts/verify-endpoints.mjs` — fails CI on any `fetch('/api/v1/..')` that has no matching server route. Caught a drift in this very PR (`/cloud/status` → `/sync/status`).
 - `scripts/verify-buttons.mjs` — fails CI on any orphan `data-action` button (the exact class of bug that broke Step 5 skip in 0.6.1).
 - `scripts/verify-zero-mock.mjs` — forbids `page.route`, `page.routeFromHAR`, and mock helpers in `test/e2e/user-journeys/` specs.
@@ -1219,7 +1324,7 @@ on the legacy framing and will be synced in 0.7.4.
 ## [0.5.18] - 2026-04-12
 
 ### Added (F-035 — headless device auth proxy)
-- `/api/v1/cloud/auth/start` response now includes `verification_url` (a ready-to-click link with `?code=…` pre-filled) and `is_headless` (true when the daemon is running on SSH / Codespaces / Gitpod / no-DISPLAY Linux / explicit `AWARENESS_HEADLESS=1`). UI layers (AwarenessClaw desktop Memory UI, setup wizards) can use `is_headless` to skip their own `open-browser` attempt and show the code + URL directly.
+- `/api/v1/cloud/auth/start` response now includes `verification_url` (a ready-to-click link with `?code=…` pre-filled) and `is_headless` (true when the daemon is running on SSH / Codespaces / Gitpod / no-DISPLAY Linux / explicit `AWARENESS_HEADLESS=1`). UI layers (OCT-Agent desktop Memory UI, setup wizards) can use `is_headless` to skip their own `open-browser` attempt and show the code + URL directly.
 - `/api/v1/cloud/auth/poll` accepts a new optional `total_wait_ms` parameter (clamped to `[30s, 900s]`). Previous hard cap was 30 seconds — far too short for cross-device flows where the user has to switch to a phone / second laptop to approve. Default stays at 60s for backward compat.
 
 ### Fixed (pre-existing bugs surfaced while wiring F-035)
@@ -1258,12 +1363,12 @@ on the legacy framing and will be synced in 0.7.4.
 ## [0.5.14] - 2026-04-11
 
 ### Fixed
-- **MOC topic cards now return their full member list**: `GET /api/v1/knowledge/:id` on a MOC card (card_type='moc') now returns a `members` array resolved via tag-match (every non-MOC active card that shares at least one tag with the MOC). Previously the endpoint only returned the MOC row itself, so clients had no way to discover topic members and had to fall back to fragile keyword matching. Added a test covering the 3-member case in `wiki-api.test.mjs`. Fixes the "Topic says 15 cards but only 4 shown" bug reported by the AwarenessClaw desktop UI.
+- **MOC topic cards now return their full member list**: `GET /api/v1/knowledge/:id` on a MOC card (card_type='moc') now returns a `members` array resolved via tag-match (every non-MOC active card that shares at least one tag with the MOC). Previously the endpoint only returned the MOC row itself, so clients had no way to discover topic members and had to fall back to fragile keyword matching. Added a test covering the 3-member case in `wiki-api.test.mjs`. Fixes the "Topic says 15 cards but only 4 shown" bug reported by the OCT-Agent desktop UI.
 
 ## [0.5.13] - 2026-04-08
 
 ### Fixed
-- **Dashboard auto-open no longer spams browser windows**: The local daemon now uses a global `~/.awareness/.dashboard-opened` first-run flag instead of a per-project one, so new workspaces don't keep re-opening `http://localhost:37800/`. Auto-open is also removed from `@awareness-sdk/setup`, leaving the daemon as the single source of truth for this behavior.
+- **Dashboard auto-open no longer spams browser windows**: The local daemon now uses a global `~/.awareness/.dashboard-opened` first-run flag instead of a per-project one, so new workspaces don't keep re-opening `http://localhost:37800/`. Auto-open is also removed from `@awareness.market/setup`, leaving the daemon as the single source of truth for this behavior.
 
 ## [0.5.12] - 2026-04-07
 

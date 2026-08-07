@@ -682,6 +682,112 @@ async function cmdBenchmark(flags) {
 }
 
 // ---------------------------------------------------------------------------
+// F-088 · anchor — ERC-8350 memory anchoring (status | flush)
+// The private key exists only inside this process for the duration of one flush:
+// prompted with hidden input, never written to disk, never sent to the daemon.
+// ---------------------------------------------------------------------------
+
+async function cmdAnchor(flags) {
+  const sub = process.argv.slice(3).find((a) => !a.startsWith('-')) || 'status';
+  const projectDir = flags.dir ? String(flags.dir) : process.cwd();
+  const {loadLocalConfig} = await import('../src/core/config.mjs');
+  const port = flags.port || loadLocalConfig(projectDir)?.daemon?.port || 37800;
+  const base = `http://127.0.0.1:${port}/api/v1`;
+
+  const status = await (await fetch(`${base}/anchor/status`)).json();
+  if (!status.enabled) {
+    console.log('Anchoring is disabled.');
+    console.log('Enable it in .awareness/config.json → anchoring.enabled = true');
+    console.log('and set anchoring.controller_address, then restart the daemon.');
+    return;
+  }
+
+  if (sub === 'status') {
+    console.log(`Space:        ${status.spaceId || '(created on first build)'}`);
+    console.log(`Controller:   ${status.controller || '(not configured)'}`);
+    console.log(`Chain:        ${status.chainId} · registry ${status.registry}`);
+    console.log(`Local head:   seq ${status.lastBuilt.seq}${status.lastBuilt.root ? ` · root ${status.lastBuilt.root.slice(0, 18)}…` : ''}`);
+    console.log(`Anchored:     ${status.anchored.count} transition(s)`);
+    console.log(`Pending:      ${status.pending.length}`);
+    for (const p of status.pending) {
+      console.log(`  seq ${p.seq} · ${p.opsCount} ops · ${p.transitionId.slice(0, 18)}… · ${p.createdAt}`);
+    }
+    if (status.pending.length) {
+      const gas = status.pending.length * status.estGasPerCommit;
+      console.log(`Est. gas:     ~${gas.toLocaleString()} (+110k once for Space registration)`);
+      console.log(`Run 'awareness-local anchor flush' to broadcast.`);
+    }
+    return;
+  }
+
+  if (sub !== 'flush') {
+    console.error(`Unknown anchor subcommand: ${sub} (expected 'status' or 'flush')`);
+    process.exit(1);
+  }
+
+  if (!status.pending.length) { console.log('Nothing to anchor.'); return; }
+  if (!status.controller) { console.error('anchoring.controller_address is not configured.'); process.exit(1); }
+
+  const key = await promptHidden(
+    `Anchoring ${status.pending.length} transition(s) to chain ${status.chainId}.\n` +
+    `Paste the private key for ${status.controller} (input hidden): `
+  );
+  const privKeyHex = key.startsWith('0x') ? key : `0x${key}`;
+
+  const {flushOutbox} = await import('../src/daemon/anchoring/flush.mjs');
+  const {pending} = await (await fetch(`${base}/anchor/outbox`)).json();
+  try {
+    const results = await flushOutbox({
+      rpcUrl: status.rpcUrl, chainId: status.chainId, registry: status.registry,
+      privKeyHex, controller: status.controller,
+      spaceId: status.spaceId, spaceSalt: status.spaceSalt,
+      rows: pending,
+      onConfirm: async (seq, txHash) => {
+        await fetch(`${base}/anchor/confirm`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({seq, tx_hash: txHash}),
+        });
+      },
+      log: (m) => console.log(`  ${m}`),
+    });
+    const sent = results.filter((r) => !r.skipped).length;
+    console.log(`Done: ${sent} anchored, ${results.length - sent} reconciled.`);
+  } catch (err) {
+    console.error(`Flush failed (outbox is intact, re-run to resume): ${err.message}`);
+    process.exit(1);
+  }
+}
+
+/** Hidden-input prompt: echoes '*' per keypress, never the characters. */
+function promptHidden(promptText) {
+  return new Promise((resolve) => {
+    process.stdout.write(promptText);
+    const stdin = process.stdin;
+    stdin.setRawMode?.(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+    let value = '';
+    const onData = (ch) => {
+      if (ch === '\r' || ch === '\n') {
+        stdin.setRawMode?.(false);
+        stdin.pause();
+        stdin.off('data', onData);
+        process.stdout.write('\n');
+        resolve(value.trim());
+      } else if (ch === '') { // Ctrl-C
+        process.stdout.write('\n');
+        process.exit(130);
+      } else if (ch === '' || ch === '') { // backspace
+        value = value.slice(0, -1);
+      } else {
+        value += ch;
+      }
+    };
+    stdin.on('data', onData);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Help
 // ---------------------------------------------------------------------------
 
@@ -698,6 +804,7 @@ Commands:
   status    Show daemon status and stats
   reindex   Rebuild the search index
   mcp       Run as stdio MCP server
+  anchor    ERC-8350 memory anchoring: 'anchor status' | 'anchor flush' (F-088)
   benchmark Run recall benchmark against a JSONL dataset
 
 Options:
@@ -713,14 +820,14 @@ Options:
   --help               Show this help message
 
 Examples:
-  npx @awareness-sdk/local start
-  npx @awareness-sdk/local status
-  npx @awareness-sdk/local stop
-  npx @awareness-sdk/local reindex --project /path/to/project
-  npx @awareness-sdk/local mcp --project /path/to/project --port 37800
-  npx @awareness-sdk/local benchmark --project /path/to/project --dataset tests/memory-benchmark/datasets/recall_core.jsonl
-  npx @awareness-sdk/local benchmark --project tests/memory-benchmark/projects/core-recall --dataset tests/memory-benchmark/datasets/recall_core.jsonl --backend builtin --reindex
-  npx @awareness-sdk/local benchmark --project tests/memory-benchmark/projects/universal-core --dataset tests/memory-benchmark/datasets/universal_core.jsonl --backend all --reindex --report tests/memory-benchmark/reports/universal_core.json
+  npx @awareness.market/local start
+  npx @awareness.market/local status
+  npx @awareness.market/local stop
+  npx @awareness.market/local reindex --project /path/to/project
+  npx @awareness.market/local mcp --project /path/to/project --port 37800
+  npx @awareness.market/local benchmark --project /path/to/project --dataset tests/memory-benchmark/datasets/recall_core.jsonl
+  npx @awareness.market/local benchmark --project tests/memory-benchmark/projects/core-recall --dataset tests/memory-benchmark/datasets/recall_core.jsonl --backend builtin --reindex
+  npx @awareness.market/local benchmark --project tests/memory-benchmark/projects/universal-core --dataset tests/memory-benchmark/datasets/universal_core.jsonl --backend all --reindex --report tests/memory-benchmark/reports/universal_core.json
 `);
 }
 
@@ -754,6 +861,9 @@ async function main() {
       break;
     case 'benchmark':
       await cmdBenchmark(flags);
+      break;
+    case 'anchor':
+      await cmdAnchor(flags);
       break;
     default:
       console.error(`Unknown command: ${command}`);

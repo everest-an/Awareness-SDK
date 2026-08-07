@@ -1,6 +1,6 @@
-# @awareness-sdk/local
+# @awareness.market/local
 
-[![npm](https://img.shields.io/npm/v/@awareness-sdk/local?color=7b68ee)](https://www.npmjs.com/package/@awareness-sdk/local) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-95.6%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
+[![npm](https://img.shields.io/npm/v/@awareness.market/local?color=7b68ee)](https://www.npmjs.com/package/@awareness.market/local) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/discord/1354000000000000000?color=5865F2&logo=discord&logoColor=white&label=Discord)](https://discord.com/invite/nMDrT538Qa)
 
 Local-first AI agent memory system. No account needed.
 
@@ -22,7 +22,7 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 ║   │                                                 │        ║
 ║   │   Recall@1    77.6%    (388 / 500)              │        ║
 ║   │   Recall@3    91.8%    (459 / 500)              │        ║
-║   │   Recall@5    95.6%    (478 / 500)  ◀ PRIMARY   │        ║
+║   │   Recall@5    96.0%    (480 / 500)  ◀ PRIMARY   │        ║
 ║   │   Recall@10   97.4%    (487 / 500)              │        ║
 ║   │                                                 │        ║
 ║   └─────────────────────────────────────────────────┘        ║
@@ -45,7 +45,7 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 │  System                         │  R@5      │  Note         │
 ├─────────────────────────────────┼───────────┼───────────────┤
 │  MemPalace (ChromaDB raw)       │  96.6%    │  R@5 only *   │
-│  ★ Awareness Memory (Hybrid)    │  95.6%    │  Hybrid RRF   │
+│  ★ Awareness Memory (Hybrid)    │  96.0%    │  Hybrid RRF   │
 │  OMEGA                          │  95.4%    │  QA Accuracy  │
 │  Mastra (GPT-5-mini)            │  94.9%    │  QA Accuracy  │
 │  Mastra (GPT-4o)                │  84.2%    │  QA Accuracy  │
@@ -71,14 +71,14 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 │  single-session-user     ████████████████████████▎     88.6%│
 │  single-session-pref     ███████████████████████▏      86.7%│
 │                                                             │
-│  Overall                 █████████████████████████▉    95.6%│
+│  Overall                 █████████████████████████▉    96.0%│
 │                                                             │
 │  ┌───────────────────────────────────────────────┐          │
 │  │  Ablation Study                               │          │
 │  │  ─────────────────────────────────────────    │          │
 │  │  Vector-only:   92.6%  ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░     │          │
 │  │  BM25-only:     91.4%  ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░     │          │
-│  │  Hybrid RRF:    95.6%  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░  ★  │          │
+│  │  Hybrid RRF:    96.0%  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░  ★  │          │
 │  │                        Hybrid = +3% over any  │          │
 │  │                        single method alone    │          │
 │  └───────────────────────────────────────────────┘          │
@@ -87,14 +87,31 @@ Awareness Memory is evaluated on **[LongMemEval](https://arxiv.org/abs/2410.1081
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Zero LLM calls. Runs on Apple M1 8GB in 14 minutes. [Reproducible benchmark scripts →](https://github.com/edwin-hao-ai/Awareness/tree/main/benchmarks/longmemeval)
+Zero LLM calls. Runs on Apple M1 8GB in 14 minutes. [Reproducible benchmark scripts →](https://github.com/everest-an/Awareness/tree/main/benchmarks/longmemeval)
 
 ---
 
+## How it compares (honest)
+
+| System | LongMemEval R@5 | Local / zero-API | Setup |
+| --- | ---: | --- | --- |
+| **Awareness Local** | **96.0%** | Yes | `npx @awareness.market/setup` |
+| MemPalace | 96.6% | Yes | Manual |
+| Mem0 | 49.0% (OSS) / 93.4% (self-reported) | Graph = paid | SDK + API key |
+| Zep | 63.8% | SaaS | Cloud |
+
+- **Workflow rules injection** — Awareness writes rules into your IDE config so the agent *automatically* uses memory (init at start, recall before work, record after changes). Mem0/Zep require manual orchestration.
+- **Structured knowledge (13 categories)** — decisions, pitfalls, workflows, skills, preferences — not just raw snippets.
+- **Zero LLM calls on retrieval** — hybrid FTS5 + vector, fully offline.
+
+Full factual comparison: [Awareness vs. Alternatives](https://awareness.market/sdk-docs/ALTERNATIVES.md)
+
 ## Install
 
+
+
 ```bash
-npm install -g @awareness-sdk/local
+npm install -g @awareness.market/local
 ```
 
 ## Quick Start
@@ -105,7 +122,7 @@ awareness-local start
 ```
 
 ```javascript
-import { record, retrieve } from "@awareness-sdk/local/api";
+import { record, retrieve } from "@awareness.market/local/api";
 
 await record({ content: "Refactored auth middleware." });
 const result = await retrieve({ query: "What did we refactor?" });
@@ -146,14 +163,14 @@ if (result.perception) {
 
 Most memory systems pick one extraction strategy. Awareness combines them:
 
-- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 95.6% R@5 on LongMemEval, zero LLM calls on the retrieval side.
+- **Hybrid retrieval by default** — BM25 full-text + vector cosine + knowledge-graph 1-hop expansion, fused with Reciprocal Rank Fusion. 96.0% R@5 on LongMemEval, zero LLM calls on the retrieval side.
 - **Salience-aware extraction** (v0.7.3+) — the client's own LLM self-scores every card on `novelty` / `durability` / `specificity`; cards scoring below 0.4 on either novelty or durability are dropped server-side. Framework metadata (`Sender (untrusted metadata)`, `turn_brief`, `[Operational context ...]`) is filtered before extraction runs, so raw logs never leak into your knowledge base.
 - **Project isolation** — `X-Awareness-Project-Dir` header scopes memory per project. Your work memory doesn't leak into your personal memory, even on the same machine.
 - **Learning over time** — Ebbinghaus-style card decay, skill crystallization from repeated patterns (F-032 / F-034), workspace graph self-prune to keep `index.db` bounded (F-050).
 - **Zero-LLM backend** — all extraction runs on the client's LLM (Claude, GPT-4, Gemini, local Llama). The backend is a coordinator + storage layer; no inference costs pass through to you.
 - **One memory, many clients** — same daemon reachable via Claude Code skills, OpenClaw plugin, npm / pip / ClawHub, and a plain MCP server. Install any one surface and the rest just work against the same memory.
 
-See [`docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md`](https://github.com/edwin-hao-ai/Awareness/blob/main/docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md) for the honest side-by-side against MemPalace (96.6% R@5 via raw verbatim storage) — what we'd adopt from their approach and what we keep from ours.
+See [`docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md`](https://github.com/everest-an/Awareness/blob/main/docs/analysis/MEMPALACE_COMPARISON_2026-04-17.md) for the honest side-by-side against MemPalace (96.6% R@5 via raw verbatim storage) — what we'd adopt from their approach and what we keep from ours.
 
 ## License
 

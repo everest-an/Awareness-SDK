@@ -151,6 +151,13 @@ export class AwarenessLocalDaemon {
     this.cloudSync = null;
     this.httpServer = null;
     this.watcher = null;
+    // F-064 Phase 2 · External bindings routing table (site ↔ workspace ↔
+    // session). Global (~/.awareness/external-bindings.json), lazily created
+    // by the /api/v1/bindings handlers so it survives workspace switches.
+    this.bindingStore = null;
+
+    // F-088: ERC-8350 anchoring manager (opt-in; stays null unless enabled)
+    this.anchoring = null;
 
     // F-053 Phase 3 · archetype classifier index (lazy-built on first recall,
     // then cached for daemon lifetime). Building it costs one embed per
@@ -354,6 +361,9 @@ export class AwarenessLocalDaemon {
     // ---- Graph maintenance: edge cap + VACUUM every 24h ----
     this._startGraphMaintenanceTimer();
 
+    // ---- F-088: ERC-8350 anchoring (opt-in, lazy, fail-soft) ----
+    await this._initAnchoring();
+
     console.log(
       `[awareness-local] daemon running at http://localhost:${this.port}`
     );
@@ -362,6 +372,24 @@ export class AwarenessLocalDaemon {
     );
 
     return { started: true, port: this.port, pid: process.pid };
+  }
+
+  /**
+   * F-088: initialize ERC-8350 anchoring. Opt-in via config; dynamically imported
+   * so the module never loads unless enabled; any failure only warns — memory
+   * features are unaffected by design (see PLAN.md D2/D7).
+   */
+  async _initAnchoring() {
+    try {
+      const config = this._loadConfig();
+      if (!config.anchoring?.enabled) return;
+      const {AnchoringManager} = await import('./daemon/anchoring/anchoring.mjs');
+      this.anchoring = new AnchoringManager(this, config.anchoring).ensureInit();
+      console.log('[awareness-local] ERC-8350 anchoring enabled (outbox mode)');
+    } catch (err) {
+      this.anchoring = null;
+      console.warn(`[awareness-local] anchoring disabled (memory unaffected): ${err.message}`);
+    }
   }
 
   /**

@@ -32,6 +32,7 @@ const SUBDIRS = [
   'tasks/done',
   'documents',   // F-038: converted documents (PDF/DOCX → markdown)
   'workspace',   // F-038: workspace scan state and cache
+  'witness',     // F-088: ERC-8350 private witnesses (salts + payloads, never committed)
 ];
 
 /** Files/patterns that must NOT be committed to Git */
@@ -51,6 +52,9 @@ config.json
 scan-state.json
 documents/
 workspace/
+
+# F-088: ERC-8350 private witnesses (salts + payloads — leaking these opens the commitments)
+witness/
 `;
 
 /** Default configuration matching spec section 7.5 */
@@ -70,6 +74,13 @@ const DEFAULT_CONFIG = Object.freeze({
   },
   extraction: {
     enabled: true,
+  },
+  // F-064 Phase 2 · memory write behaviour.
+  //   deduplication_mode: 'source_only' (default, keeps cross-source
+  //   provenance) | 'global' (collapse identical content across all sources).
+  //   Env AWARENESS_MEMORY_DEDUP_MODE overrides this.
+  memory: {
+    deduplication_mode: 'source_only',
   },
   embedding: {
     language: 'english',
@@ -92,6 +103,15 @@ const DEFAULT_CONFIG = Object.freeze({
     auto_commit: false,
     branch: null,
   },
+  // F-088: ERC-8350 memory anchoring (opt-in). The private key is NEVER stored
+  // here — only the controller ADDRESS; signing happens exclusively in the CLI.
+  anchoring: {
+    enabled: false,
+    chain_id: 11155111,
+    rpc_url: 'https://ethereum-sepolia-rpc.publicnode.com',
+    registry_address: '0xDdf21937ba80b5fF973610877A0955b320C91241',
+    controller_address: '',
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -105,7 +125,7 @@ const DEFAULT_CONFIG = Object.freeze({
  * The 4-hex suffix is derived from a hash of hostname + homedir + platform
  * so it is stable across restarts but distinct across machines.
  *
- * @returns {string} e.g. "mac-edwins-mbp-a3f2"
+ * @returns {string} e.g. "mac-everests-mbp-a3f2"
  */
 export function generateDeviceId() {
   const hostname = os.hostname().toLowerCase();

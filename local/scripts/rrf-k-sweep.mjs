@@ -13,8 +13,8 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 
 const KS = [10, 30, 60, 100];
-const DAEMON_BIN = '/Users/edwinhao/Awareness/sdks/local/bin/awareness-local.mjs';
-const EVAL_SCRIPT = '/Users/edwinhao/Awareness/sdks/local/scripts/recall-accuracy-eval.mjs';
+const DAEMON_BIN = '/Users/everestan/Awareness/sdks/local/bin/awareness-local.mjs';
+const EVAL_SCRIPT = '/Users/everestan/Awareness/sdks/local/scripts/recall-accuracy-eval.mjs';
 
 async function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 

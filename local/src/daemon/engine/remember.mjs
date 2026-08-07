@@ -56,7 +56,26 @@ export async function remember(daemon, params) {
     agent_role: params.agent_role || 'builder_agent',
     session_id: params.session_id || '',
     source: params.source || 'mcp',
+    // F-064 · external-chat provenance ({ site, url, model, captured_at }).
+    // null for regular MCP writes; passes through to memoryStore + indexer.
+    metadata: params.metadata != null ? params.metadata : null,
   };
+
+  // F-064 · Dedup on write (opt-in via dedup_same_source; used by the
+  // External AI Memory Bridge). Gated so the existing MCP write path keeps
+  // its original behaviour.
+  //   • source_only (default) → decision A: dedup within the same source,
+  //     cross-source identical content stays as two provenance records.
+  //   • global               → collapse identical content across ALL sources.
+  if (params.dedup_same_source) {
+    const dedupMode = resolveDedupMode(daemon);
+    const dupId = dedupMode === 'global'
+      ? daemon.indexer.findByContentHash(contentForPersist)
+      : daemon.indexer.findByContentHashAndSource(contentForPersist, memory.source);
+    if (dupId) {
+      return { status: 'duplicate', id: dupId, mode: 'local', dedup_mode: dedupMode };
+    }
+  }
 
   // Write markdown file
   const { id, filepath } = await daemon.memoryStore.write(memory);
@@ -140,4 +159,25 @@ export async function remember(daemon, params) {
   }
 
   return result;
+}
+
+/**
+ * F-064 Phase 2 · Resolve the active memory deduplication mode.
+ *
+ * Precedence: env `AWARENESS_MEMORY_DEDUP_MODE` > config.memory.deduplication_mode
+ * > 'source_only' (safe default — keeps cross-source provenance). Only the two
+ * known values are honoured; anything else falls through to the default.
+ *
+ * @param {object} daemon
+ * @returns {'source_only'|'global'}
+ */
+export function resolveDedupMode(daemon) {
+  const env = String(process.env.AWARENESS_MEMORY_DEDUP_MODE || '').trim().toLowerCase();
+  if (env === 'global' || env === 'source_only') return env;
+  try {
+    const cfg = daemon?._loadConfig?.();
+    const mode = cfg?.memory?.deduplication_mode;
+    if (mode === 'global' || mode === 'source_only') return mode;
+  } catch { /* config unavailable → default */ }
+  return 'source_only';
 }
