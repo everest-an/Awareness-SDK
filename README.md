@@ -167,6 +167,25 @@ Auto-recall on session start. Auto-capture on session end. Zero configuration.
 
 [Documentation](openclaw/README.md) · [npm](https://www.npmjs.com/package/@awareness.market/openclaw-memory)
 
+#### OpenCode
+
+```json
+// opencode.json — auto-capture sessions + awareness tools (no MCP config needed)
+{
+  "plugin": [
+    ["@awareness.market/opencode-plugin", {
+      "apiKey": "aw_...",
+      "memoryId": "your-memory-id",
+      "agentRole": "builder_agent"
+    }]
+  ]
+}
+```
+
+Auto-captures each session into Awareness. Registers `awareness_init` / `recall` / `record` / `lookup` as native tools.
+
+[Documentation](opencode/README.md) · [npm](https://www.npmjs.com/package/@awareness.market/opencode-plugin)
+
 ---
 
 ## Features
@@ -219,6 +238,7 @@ Your machine                          Cloud (optional)
 | [`awareness-memory-cloud`](https://pypi.org/project/awareness-memory-cloud/) | Python SDK with interceptors | `pip install awareness-memory-cloud` |
 | [`@awareness-sdk/memory-cloud`](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) | TypeScript SDK with interceptors | `npm i @awareness-sdk/memory-cloud` |
 | [`@awareness.market/openclaw-memory`](https://www.npmjs.com/package/@awareness.market/openclaw-memory) | OpenClaw plugin | `openclaw plugins install @awareness.market/openclaw-memory` |
+| [`@awareness.market/opencode-plugin`](https://www.npmjs.com/package/@awareness.market/opencode-plugin) | OpenCode plugin | `"plugin": ["@awareness.market/opencode-plugin"]` in `opencode.json` |
 | [`claudecode/`](claudecode/README.md) | Claude Code plugin | `/plugin marketplace add everest-an/Awareness-SDK` then `/plugin install awareness-memory@awareness` |
 
 ---

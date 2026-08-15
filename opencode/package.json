@@ -1,0 +1,48 @@
+{
+  "name": "@awareness.market/opencode-plugin",
+  "version": "0.1.0",
+  "description": "OpenCode plugin for Awareness memory — auto-capture sessions + cross-session recall via Awareness cloud or local daemon",
+  "author": "Everest An",
+  "license": "Apache-2.0",
+  "homepage": "https://awareness.market",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/everest-an/Awareness",
+    "directory": "sdks/opencode"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    "opencode.json.example",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --dts --clean --watch",
+    "lint": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "*"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "*",
+    "@opencode-ai/sdk": "*",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

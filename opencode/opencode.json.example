@@ -1,0 +1,41 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // ── 1. Plugin (recommended) — auto-capture + awareness tools ─────────────
+  // Auto-captures each session summary into Awareness, and registers the
+  // awareness_init / recall / record / lookup tools directly (no MCP needed).
+  "plugin": [
+    ["@awareness.market/opencode-plugin", {
+      "apiKey": "aw_your-api-key",
+      "memoryId": "your-memory-id",
+      "baseUrl": "https://awareness.market/api/v1",
+      "agentRole": "builder_agent",
+      "autoRecall": true,
+      "autoCapture": true,
+      "recallLimit": 8
+    }]
+  ],
+
+  // ── 2. Optional: connect Awareness as an MCP server (belt-and-suspenders) ─
+  // The plugin already registers the same tools — this is only if you prefer
+  // the MCP path or want the tools surfaced in opencode's MCP list.
+  "mcp": {
+    "awareness-cloud": {
+      "type": "remote",
+      "url": "https://awareness.market/mcp",
+      "headers": { "Authorization": "Bearer {env:AWARENESS_API_KEY}" },
+      "enabled": false
+    },
+    "awareness-local": {
+      "type": "remote",
+      "url": "http://localhost:37800/mcp",
+      "enabled": false
+    }
+  },
+
+  // ── 3. Optional: load the bundled skills for guided workflows ────────────
+  // Copy skills/ from the package into .opencode/skills/ (see README), then:
+  "skills": {
+    "paths": [".opencode/skills"]
+  }
+}
