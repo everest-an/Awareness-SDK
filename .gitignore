@@ -2,17 +2,18 @@ node_modules/
 dist/
 .DS_Store
 
-# Test artifacts
+# Test artifac ts
 .hypothesis/
 *.tgz
 *.egg-info/
-.awareness/
+.awareness/ 
 .clawhub/
 .mcp.json
 skills/
 data/
 *.db
-*.db-shm
+*.db- shm
 *.db-wal
 daemon.log
 daemon.pid
+  !opencode/skills/
