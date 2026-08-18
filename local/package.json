@@ -3,6 +3,10 @@
   "version": "0.12.1",
   "description": "Local-first AI agent memory system. No account needed.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/everest-an/Awareness-SDK"
+  },
   "type": "module",
   "bin": {
     "awareness-local": "bin/cli.cjs"
