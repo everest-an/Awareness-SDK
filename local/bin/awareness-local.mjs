@@ -788,6 +788,112 @@ function promptHidden(promptText) {
 }
 
 // ---------------------------------------------------------------------------
+// Command: deals — read/publish on the public Open Deal Board (cloud REST).
+// Anonymous by default: no API key needed; publish goes through the guest quota
+// (per-IP daily limit + global circuit breaker, enforced server-side).
+// ---------------------------------------------------------------------------
+
+const DEFAULT_DEALS_BASE = 'https://awareness.market/api/v1';
+
+function dealsBase(flags) {
+  const raw = typeof flags['base-url'] === 'string'
+    ? flags['base-url']
+    : process.env.AWARENESS_BASE_URL || DEFAULT_DEALS_BASE;
+  return raw.replace(/\/+$/, '');
+}
+
+function dealsWebBase(baseUrl) {
+  // Derive the human-facing site origin from the API base (strip /api/v1).
+  return baseUrl.replace(/\/api\/v1\/?$/, '');
+}
+
+async function cmdDeals(flags) {
+  const sub = process.argv.slice(3).find((a) => !a.startsWith('-')) || 'list';
+  const baseUrl = dealsBase(flags);
+  const webBase = dealsWebBase(baseUrl);
+
+  if (sub === 'list') {
+    const params = new URLSearchParams();
+    if (flags.q) params.set('q', String(flags.q));
+    if (flags.direction) params.set('direction', String(flags.direction));
+    if (flags.category) params.set('category', String(flags.category));
+    if (flags.region) params.set('region', String(flags.region));
+    const limit = flags.limit ? Math.max(1, Math.min(parseInt(flags.limit, 10) || 20, 50)) : 20;
+    params.set('limit', String(limit));
+
+    const res = await fetch(`${baseUrl}/public/deals?${params}`);
+    if (!res.ok) {
+      console.error(`Error: GET /public/deals failed (${res.status})`);
+      process.exit(1);
+    }
+    const data = await res.json();
+    const deals = Array.isArray(data?.deals) ? data.deals : [];
+
+    if (flags.json === true) {
+      console.log(JSON.stringify(data, null, 2));
+      return;
+    }
+
+    const total = data?.total ?? deals.length;
+    console.log(`Open Deal Board — ${total} listing(s)`);
+    if (deals.length === 0) {
+      console.log('No listings match. Publish one with: awareness-local deals publish');
+      return;
+    }
+    console.log('');
+    for (const d of deals) {
+      const dir = d.direction === 'supply' ? 'SUPPLY ' : 'DEMAND ';
+      const meta = [d.category, d.region].filter(Boolean).join(' · ');
+      console.log(`[${dir}] ${d.title}${meta ? ` (${meta})` : ''}`);
+      if (d.body) {
+        const body = String(d.body);
+        console.log(`    ${body.slice(0, 160)}${body.length > 160 ? '…' : ''}`);
+      }
+      console.log(`    ${webBase}/deals/${d.id}`);
+      console.log('');
+    }
+    return;
+  }
+
+  if (sub === 'publish') {
+    const missing = ['direction', 'category', 'title', 'body'].filter((k) => !flags[k]);
+    if (missing.length > 0) {
+      console.error(`Error: --${missing.join(' --')} required for publish`);
+      console.error('Example: awareness-local deals publish --direction supply --category compute --title "H100 available" --body "40x H100 SXM, Shenzhen, sealed." [--region CN-SZ] [--contact-visibility public|on_request|private]');
+      process.exit(1);
+    }
+    const payload = {
+      direction: String(flags.direction),
+      category: String(flags.category),
+      title: String(flags.title),
+      body: String(flags.body),
+    };
+    if (flags.region) payload.region = String(flags.region);
+    if (flags['contact-visibility']) payload.contact_visibility = String(flags['contact-visibility']);
+
+    const res = await fetch(`${baseUrl}/deals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error(`Error: POST /deals failed (${res.status}) ${text.slice(0, 300)}`);
+      process.exit(1);
+    }
+    const deal = await res.json();
+    console.log('Published (anonymous) ✓');
+    console.log(`  id:    ${deal.id}`);
+    console.log(`  title: ${deal.title}`);
+    console.log(`  url:   ${webBase}/deals/${deal.id}`);
+    return;
+  }
+
+  console.error(`Unknown deals subcommand: ${sub} (use 'list' | 'publish')`);
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
 // Help
 // ---------------------------------------------------------------------------
 
@@ -806,6 +912,7 @@ Commands:
   mcp       Run as stdio MCP server
   anchor    ERC-8350 memory anchoring: 'anchor status' | 'anchor flush' (F-088)
   benchmark Run recall benchmark against a JSONL dataset
+  deals     Open Deal Board: 'deals list' | 'deals publish' (anonymous, no API key)
 
 Options:
   --project <dir>      Project directory (default: current directory)
@@ -817,6 +924,15 @@ Options:
   --markdown-report <path>  Write benchmark Markdown report
   --reindex            Rebuild the benchmark target index before running
   --json               Print benchmark report as JSON
+  --base-url <url>     Deals API base (default https://awareness.market/api/v1)
+  --q <text>           Deals free-text search
+  --direction <d>      Deals filter: supply | demand
+  --category <c>       Deals filter: compute | colocation | logistics
+  --region <r>         Deals filter: region code (SG, HK, CN-SZ...)
+  --limit <n>          Deals result limit (1-50, default 20)
+  --title <text>       Deals publish: listing title
+  --body <text>        Deals publish: listing body
+  --contact-visibility Deals publish: public | on_request | private
   --help               Show this help message
 
 Examples:
@@ -828,6 +944,8 @@ Examples:
   npx @awareness.market/local benchmark --project /path/to/project --dataset tests/memory-benchmark/datasets/recall_core.jsonl
   npx @awareness.market/local benchmark --project tests/memory-benchmark/projects/core-recall --dataset tests/memory-benchmark/datasets/recall_core.jsonl --backend builtin --reindex
   npx @awareness.market/local benchmark --project tests/memory-benchmark/projects/universal-core --dataset tests/memory-benchmark/datasets/universal_core.jsonl --backend all --reindex --report tests/memory-benchmark/reports/universal_core.json
+  npx @awareness.market/local deals list --q H100 --direction supply
+  npx @awareness.market/local deals publish --direction supply --category compute --title "H100 available" --body "40x H100 SXM, Shenzhen"
 `);
 }
 
@@ -861,6 +979,9 @@ async function main() {
       break;
     case 'benchmark':
       await cmdBenchmark(flags);
+      break;
+    case 'deals':
+      await cmdDeals(flags);
       break;
     case 'anchor':
       await cmdAnchor(flags);
