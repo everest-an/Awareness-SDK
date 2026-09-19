@@ -343,6 +343,49 @@ if result.get("perception"):
 
 ---
 
+## Structured Trace (F-069)
+
+Memory operations can emit a structured JSONL trace — the runtime evidence
+consumed by [`GOVERNANCE.md`](../GOVERNANCE.md) §5/§6 (recall routes/hits/
+latency, broker-degradation frequency). **Off by default**; opt in per
+process:
+
+```bash
+export AWARENESS_TRACE_PATH=/tmp/awareness-trace.jsonl
+python -m examples.parametric_quickstart
+# → 3× broker_unavailable events (graceful degradation is observable, F-062)
+```
+
+or per client: `MemoryCloudClient(base_url=..., trace_path=...)`.
+
+- **Envelope**: `{ts, event, session_id, channel, v, ...fields}` — same shape
+  as M1's `JsonlMetricWriter`, joinable by `session_id`; `v` is the envelope
+  schema version (ADR-003, currently 1; bump requires an ADR).
+- **Hash-only by default**: content is recorded as `content_hash` (sha256,
+  first 16 hex) + `content_bytes`; `trace_full_content=True` (or the
+  constructor param) opts in to raw text.
+- **Never throws**: a broken trace file disables the writer, never memory ops.
+- **Vocabulary** (8 events, changes require an ADR per F-069): `recall`,
+  `write`, `forget`, `snapshot`, `restore`, `conflict_forget`,
+  `broker_unavailable`, `transport_error` (F-072 — HTTP failures on the
+  daemon/cloud paths: `op`/`route`/`error_class` connect|timeout|
+  http_status/`status`; content-free, never sampled).
+- **Rotation** (optional): `AWARENESS_TRACE_MAX_BYTES` (or `max_bytes=`)
+  keeps one `<path>.1` rotation.
+- **Min-interval throttling** (optional, default off, F-072):
+  `AWARENESS_TRACE_MIN_INTERVAL_MS` (or `min_interval_ms=`) throttles the
+  high-frequency success events (`recall`/`write`) — events inside the
+  window are aggregated and the next emitted event carries
+  `_suppressed_count`. Errors and rare events are never sampled.
+
+Aggregate a trace into the GOVERNANCE §6 evidence numbers:
+
+```bash
+python scripts/analyze_trace.py /tmp/awareness-trace.jsonl
+```
+
+---
+
 ## API Coverage
 
 `MemoryCloudClient` includes:

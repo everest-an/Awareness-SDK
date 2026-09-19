@@ -27,3 +27,10 @@ try:
     __all__.append("MemoryCloudAutoGen")
 except Exception:  # pragma: no cover
     pass
+
+try:
+    from memory_cloud.integrations.parametric import MemoryCloudParametric
+
+    __all__.append("MemoryCloudParametric")
+except Exception:  # pragma: no cover
+    pass

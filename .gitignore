@@ -1,6 +1,11 @@
 node_modules/
 dist/
 .DS_Store
+.venv/
+__pycache__/
+.coverage
+.coverage.*
+htmlcov/
 
 # Test artifacts
 .hypothesis/
@@ -17,3 +22,9 @@ data/
 *.db-wal
 daemon.log
 daemon.pid
+
+# LongMemEval benchmark dataset (277MB, download from HuggingFace — see
+# benchmarks/longmemeval/run_f053_daemon_path.mjs header). Result JSONs are
+# NOT ignored: they are the gate evidence artifacts (GOVERNANCE §7).
+benchmarks/longmemeval/longmemeval_s_cleaned.json
+.loop-lock

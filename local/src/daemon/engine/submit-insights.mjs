@@ -31,6 +31,7 @@ import { validateSkillQuality } from '../skill-quality-gate.mjs';
 import { evaluateSkillGrowth } from '../skill-growth.mjs';
 import { scoreSkill } from '../skill-quality-score.mjs';
 import { runLifecycleChecks } from '../../core/lifecycle-manager.mjs';
+import { onConflictSupersede } from '../parametric-hooks.mjs';
 
 // F-034 crystallization helper constants (kept co-located with the function).
 const _CRYST_CATEGORIES = new Set(['workflow', 'decision', 'problem_solution']);
@@ -324,6 +325,15 @@ ${card.summary || card.title || ''}
 
       if (parentCardId) {
         supersedeCard(indexerAtStart, parentCardId, cardId);
+        // P2-1 · parametric broker conflict hook (conflict_forget, default off).
+        // Fire-and-forget — the conflict decision was already made by
+        // card-evolution; this only executes the parametric-layer consequence.
+        onConflictSupersede(daemon, verdict.target, {
+          id: cardId,
+          title: card.title || '',
+          summary: card.summary || '',
+          category: card.category || '',
+        }).catch(() => {});
       }
 
       try {

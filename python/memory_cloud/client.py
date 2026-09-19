@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 import requests
 
 from memory_cloud.errors import MemoryCloudError
+from memory_cloud.tracing import resolve_trace_writer, log_recall, log_write, log_transport_error
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,14 @@ DEFAULT_LOCAL_DAEMON_URL = "http://localhost:37800"
 DAEMON_SUPPORTED_TOOLS = frozenset(
     {"awareness_init", "awareness_recall", "awareness_record", "awareness_lookup"}
 )
+
+# F-072: content-free op labels for transport_error events on the daemon route.
+DAEMON_OP_NAMES = {
+    "awareness_init": "init",
+    "awareness_recall": "recall",
+    "awareness_record": "record",
+    "awareness_lookup": "lookup",
+}
 
 
 def _parse_recall_markdown(text: str) -> List[Dict[str, Any]]:
@@ -97,6 +106,10 @@ class MemoryCloudClient:
         # `mode="cloud"` (default) talks REST to the public Awareness Cloud.
         # `mode="auto"` probes the daemon first and falls back to cloud.
         local_url: str = DEFAULT_LOCAL_DAEMON_URL,
+        # F-069 · SDK-level structured trace. Off by default; set a file
+        # path (or AWARENESS_TRACE_PATH env) to enable. See tracing.py.
+        trace_path: Optional[str] = None,
+        trace_full_content: bool = False,
     ):
         self.mode = mode
         # Cloud REST base URL — defaults to the public Awareness Cloud, NEVER to a local dev server.
@@ -113,6 +126,10 @@ class MemoryCloudClient:
         self.default_source = default_source
         self._session_cache: Dict[str, str] = {}
 
+        # F-069 · structured trace: NullTraceWriter (no-op) unless enabled.
+        self.trace_full_content = trace_full_content
+        self._trace_writer = resolve_trace_writer(trace_path, session_id=session_prefix)
+
         # Auto-extraction config
         self.enable_extraction = enable_extraction or (extraction_llm is not None)
         self._extraction_llm = extraction_llm
@@ -128,6 +145,103 @@ class MemoryCloudClient:
 
         if self._extraction_llm is not None:
             self._llm_type = _detect_llm_type(self._extraction_llm)
+
+    # ----------------------------
+    # Trace emit helpers (F-069) — never throw, no-op when tracing is off
+    # ----------------------------
+    def _trace_recall(self, route: str, results: Any, t0: float, trace_id: Optional[str] = None,
+                      session_id: Optional[str] = None) -> None:
+        try:
+            items = results if isinstance(results, list) else []
+            log_recall(
+                self._trace_writer,
+                trace_id=trace_id,
+                route=route,
+                hit=bool(items),
+                n_results=len(items),
+                latency_ms=(time.perf_counter() - t0) * 1000.0,
+                session_id=session_id,
+            )
+        except Exception:
+            pass
+
+    def _trace_write(self, content: Any, trace_id: Optional[str] = None,
+                     session_id: Optional[str] = None) -> None:
+        try:
+            if content is None:
+                return
+            log_write(self._trace_writer, content=content, full_content=self.trace_full_content,
+                      session_id=session_id)
+        except Exception:
+            pass
+
+    def _trace_transport_error(
+        self,
+        *,
+        op: str,
+        route: str,
+        error_class: str,
+        status: Optional[int] = None,
+        t0: Optional[float] = None,
+        trace_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> None:
+        """F-072: transport failures are evidence — emit, never throw.
+
+        session_id is passed when the caller knows it (record/chat flows), so
+        failure evidence attributes to the same session axis as recall/write
+        success events; genuinely session-less endpoints (list/get/…) omit it.
+        """
+        try:
+            latency = (time.perf_counter() - t0) * 1000.0 if t0 is not None else None
+            log_transport_error(
+                self._trace_writer,
+                op=op,
+                route=route,
+                error_class=error_class,
+                status=status,
+                latency_ms=latency,
+                trace_id=trace_id,
+                session_id=session_id,
+            )
+        except Exception:
+            pass
+
+    @staticmethod
+    def _classify_transport_exc(exc: Exception) -> str:
+        """Map a requests exception to the F-072 error_class vocabulary."""
+        if isinstance(exc, requests.exceptions.Timeout):
+            return "timeout"
+        if isinstance(exc, requests.exceptions.ConnectionError):
+            return "connect"
+        return "other"
+
+    @staticmethod
+    def _op_from_request(method: str, path: str) -> str:
+        """Content-free operation label for a REST call (memory ids stripped)."""
+        method_u = method.upper()
+        if path.endswith("/retrieve"):
+            return "retrieve"
+        if path.endswith("/mcp/events"):
+            return "ingest_events"
+        if path.endswith("/insights/submit"):
+            return "submit_insights"
+        if path.endswith("/chat"):
+            return "chat"
+        if path.endswith("/timeline"):
+            return "timeline"
+        if path.endswith("/content"):
+            return "write" if method_u == "POST" else "content"
+        if path.endswith("/sessions/migrate"):
+            return "session_migrate"
+        if path.endswith("/memories"):
+            return "create_memory" if method_u == "POST" else "list_memories"
+        if "/content/" in path:
+            return "delete_content" if method_u == "DELETE" else "content"
+        if re.search(r"/memories/[^/]+$", path):
+            return {"GET": "get_memory", "PATCH": "update_memory",
+                    "DELETE": "delete_memory"}.get(method_u, "memory")
+        return "http"
 
     # ----------------------------
     # Local daemon bridge (mode="local" / "auto")
@@ -178,6 +292,7 @@ class MemoryCloudClient:
             "method": "tools/call",
             "params": {"name": tool_name, "arguments": args},
         }
+        t0 = time.perf_counter()
         try:
             response = self.session.post(
                 f"{self.local_daemon_url}/mcp",
@@ -186,8 +301,23 @@ class MemoryCloudClient:
                 headers={"Content-Type": "application/json"},
             )
         except requests.RequestException as exc:
+            self._trace_transport_error(
+                op=DAEMON_OP_NAMES.get(tool_name, tool_name),
+                route="daemon",
+                error_class=self._classify_transport_exc(exc),
+                t0=t0,
+                session_id=args.get("session_id"),
+            )
             raise MemoryCloudError("LOCAL_DAEMON_ERROR", f"Daemon RPC failed: {exc}") from exc
         if response.status_code >= 400:
+            self._trace_transport_error(
+                op=DAEMON_OP_NAMES.get(tool_name, tool_name),
+                route="daemon",
+                error_class="http_status",
+                status=response.status_code,
+                t0=t0,
+                session_id=args.get("session_id"),
+            )
             raise MemoryCloudError(
                 "LOCAL_DAEMON_ERROR",
                 f"Daemon HTTP {response.status_code}: {response.text[:200]}",
@@ -355,10 +485,11 @@ class MemoryCloudClient:
         detail: Progressive disclosure level — "summary" (default server behavior),
             "full", or "debug". Controls how much metadata and context is returned
             per result. Omit to use the server default.
-        ids: Restrict recall to specific record IDs. When provided, only matching
+            ids: Restrict recall to specific record IDs. When provided, only matching
             records are returned (bypasses vector search). Useful for follow-up
             drill-down after an initial broad recall.
         """
+        t0 = time.perf_counter()
         merged: Dict[str, Any] = {
             "limit": limit,
             "reconstruct_chunks": reconstruct_chunks,
@@ -458,6 +589,7 @@ class MemoryCloudClient:
                 daemon_args["hyde_hint"] = hyde_hint.strip()
             daemon_result = self.call_local_daemon("awareness_recall", daemon_args)
             items = daemon_result.get("items") or daemon_result.get("results") or []
+            self._trace_recall("daemon", items, t0, trace_id=trace_id)
             return {"results": items}
 
         payload, resolved_trace_id = self._request(
@@ -466,7 +598,9 @@ class MemoryCloudClient:
             json_payload=body,
             trace_id=trace_id,
         )
-        return self._attach_trace(payload, resolved_trace_id)
+        result = self._attach_trace(payload, resolved_trace_id)
+        self._trace_recall("cloud", result.get("results", []), t0, trace_id=trace_id)
+        return result
 
     def retrieve_with_hyde(
         self,
@@ -594,6 +728,7 @@ class MemoryCloudClient:
             path=f"/memories/{memory_id}/chat",
             json_payload=payload,
             trace_id=trace_id,
+            session_id=session_id,
         )
         return self._attach_trace(data, resolved_trace)
 
@@ -662,8 +797,7 @@ class MemoryCloudClient:
                 - dict: single event dict (must have 'content' key)
                 - None: no events (use with insights for insights-only submission)
             insights: Pre-extracted insights dict to submit directly.
-                Keys: knowledge_cards, risks, action_items.
-            scope: Content scope — "timeline" (default) or "knowledge".
+                Keys: knowledge_cards, risks, action_items.            scope: Content scope — "timeline" (default) or "knowledge".
             session_id: Explicit session id. Auto-generated if empty.
             source: Source label. Falls back to client default_source.
             user_id: User id for multi-user memories.
@@ -676,6 +810,7 @@ class MemoryCloudClient:
             Dict with ingest result and/or insights submission result.
         """
         # Local daemon bridge: route through awareness_record MCP tool.
+        t0 = time.perf_counter()
         if self._should_use_daemon():
             args: Dict[str, Any] = {"action": "remember"}
             events_count = 0
@@ -705,6 +840,8 @@ class MemoryCloudClient:
             if agent_role:
                 args["agent_role"] = agent_role
             daemon_result = self.call_local_daemon("awareness_record", args)
+            self._trace_write(content, trace_id=trace_id,
+                              session_id=daemon_result.get("session_id") or session_id or None)
             return {
                 "memory_id": memory_id,
                 "session_id": daemon_result.get("session_id", session_id or ""),
@@ -748,6 +885,7 @@ class MemoryCloudClient:
                     user_id=resolved_user_id or None,
                     agent_role=resolved_agent_role or None,
                     trace_id=trace_id,
+                    session_id=active_session,
                 )
                 result["ingest"] = ingest_result
                 result["events_sent"] = len(capped)
@@ -768,10 +906,12 @@ class MemoryCloudClient:
                 agent_role=resolved_agent_role or None,
                 trace_id=trace_id,
             )
+            # session context already reaches _submit_insights via its param
             result["insights"] = insights_result
             if insights_result.get("trace_id") and "trace_id" not in result:
                 result["trace_id"] = insights_result["trace_id"]
 
+        self._trace_write(content, trace_id=trace_id, session_id=active_session or None)
         return result
 
     def _build_record_events(
@@ -830,6 +970,7 @@ class MemoryCloudClient:
         user_id: Optional[str] = None,
         insights: Optional[Dict[str, Any]] = None,
         trace_id: Optional[str] = None,
+        session_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "memory_id": memory_id,
@@ -855,6 +996,7 @@ class MemoryCloudClient:
             path="/mcp/events",
             json_payload=payload,
             trace_id=trace_id,
+            session_id=session_id,
         )
         return self._attach_trace(data, resolved_trace_id)
 
@@ -1138,6 +1280,7 @@ class MemoryCloudClient:
             path=f"/memories/{memory_id}/insights/submit",
             json_payload=payload,
             trace_id=trace_id,
+            session_id=session_id,
         )
         return self._attach_trace(data, resolved_trace)
 
@@ -1806,6 +1949,7 @@ class MemoryCloudClient:
         trace_id: Optional[str] = None,
         idempotency_key: Optional[str] = None,
         extra_headers: Optional[Dict[str, str]] = None,
+        session_id: Optional[str] = None,
     ) -> Tuple[Dict[str, Any], Optional[str]]:
         response, resolved_trace = self._request_response(
             method=method,
@@ -1815,6 +1959,7 @@ class MemoryCloudClient:
             trace_id=trace_id,
             idempotency_key=idempotency_key,
             extra_headers=extra_headers,
+            session_id=session_id,
         )
         payload = self._decode_json(response)
         if not isinstance(payload, dict):
@@ -1829,6 +1974,7 @@ class MemoryCloudClient:
         params: Optional[Dict[str, Any]] = None,
         trace_id: Optional[str] = None,
         idempotency_key: Optional[str] = None,
+        session_id: Optional[str] = None,
     ) -> Tuple[Any, Optional[str]]:
         response, resolved_trace = self._request_response(
             method=method,
@@ -1837,6 +1983,7 @@ class MemoryCloudClient:
             params=params,
             trace_id=trace_id,
             idempotency_key=idempotency_key,
+            session_id=session_id,
         )
         return self._decode_json(response), resolved_trace
 
@@ -1850,11 +1997,14 @@ class MemoryCloudClient:
         idempotency_key: Optional[str] = None,
         stream: bool = False,
         extra_headers: Optional[Dict[str, str]] = None,
+        session_id: Optional[str] = None,
     ) -> Tuple[requests.Response, Optional[str]]:
         url = f"{self.base_url}{path}"
         headers = self._headers(trace_id=trace_id, idempotency_key=idempotency_key)
         if extra_headers:
             headers.update(extra_headers)
+        op = self._op_from_request(method, path)
+        t0 = time.perf_counter()
 
         for attempt in range(self.max_retries + 1):
             try:
@@ -1869,6 +2019,15 @@ class MemoryCloudClient:
                 )
             except requests.RequestException as exc:
                 if attempt >= self.max_retries:
+                    # F-072: final transport failure is evidence. Retryable
+                    # intermediate failures are intentionally not emitted —
+                    # the operation is only "failed" when the loop gives up.
+                    self._trace_transport_error(
+                        op=op, route="cloud",
+                        error_class=self._classify_transport_exc(exc),
+                        t0=t0, trace_id=trace_id,
+                        session_id=session_id,
+                    )
                     raise MemoryCloudError("NETWORK_ERROR", str(exc)) from exc
                 self._sleep(attempt)
                 continue
@@ -1878,6 +2037,11 @@ class MemoryCloudClient:
                 if response.status_code in RETRYABLE_STATUSES and attempt < self.max_retries:
                     self._sleep(attempt)
                     continue
+                self._trace_transport_error(
+                    op=op, route="cloud", error_class="http_status",
+                    status=response.status_code, t0=t0, trace_id=resolved_trace_id,
+                    session_id=session_id,
+                )
                 raise self._build_error(response, resolved_trace_id)
 
             return response, resolved_trace_id

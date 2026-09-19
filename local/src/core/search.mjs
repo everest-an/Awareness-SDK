@@ -204,6 +204,23 @@ export class SearchEngine {
     this.contextBudgeter = options.contextBudgeter || { apply: applyContextBudget };
     this.builtinBackend = options.builtinBackend || new BuiltinRetrievalBackend({ engine: this });
     this.qmdBackend = options.qmdBackend || new QmdRetrievalBackend(options.qmd || {});
+    // P2-0 · parametric first-hop broker (optional, default null = off).
+    // Set via setParametricBroker() or options.parametricBroker.
+    this._parametricBroker = options.parametricBroker || null;
+  }
+
+  /**
+   * P2-0 · Attach a parametric memory broker for the optional first-hop
+   * stage in unifiedCascadeSearch.  The broker must expose:
+   *   - recall(sessionId, query, topK) → [{value, score}, …]
+   *   - hasSession(sessionId) → boolean
+   *
+   * When attached and opts.parametricFirstHop === true is passed to
+   * unifiedCascadeSearch, the broker is consulted before the E5+FTS5
+   * cascade.  Pass null to detach.
+   */
+  setParametricBroker(broker) {
+    this._parametricBroker = broker || null;
   }
 
   // -------------------------------------------------------------------------
@@ -457,6 +474,38 @@ export class SearchEngine {
       return { results: [] };
     }
 
+    // -----------------------------------------------------------------------
+    // P2-0 · Optional parametric first-hop stage.
+    //
+    // When enabled AND a broker session snapshot is available, try O(1)
+    // exact parametric recall BEFORE the E5+FTS5 cascade. Hit criterion is
+    // M1's ParametricMemory relative-zero threshold: |qF| ≤ 1e-5·|F| means
+    // "no binding" → miss; anything above is a genuine hit. On hit, return
+    // the parametric results directly. On miss, no-snapshot,
+    // broker-unreachable, or any failure → fall through to the existing
+    // cascade with zero behavioural change.
+    //
+    // Arming surfaces (F-074): per-call `opts.parametricFirstHop === true`,
+    // or the process-level `AWARENESS_PARAMETRIC_FIRST_HOP=1` env so A/B
+    // benchmark runs (run_ab.sh) and MCP callers can flip without code
+    // edits. Both default OFF; anything other than exactly '1' is off.
+    // Even when armed, the stage no-ops without an attached broker
+    // (_parametricBroker), so arming alone cannot change behaviour.
+    // E5/SQLite channels are never touched.
+    // -----------------------------------------------------------------------
+    const firstHopArmed = opts.parametricFirstHop === true
+      || process.env.AWARENESS_PARAMETRIC_FIRST_HOP === '1';
+    if (firstHopArmed && this._parametricBroker) {
+      try {
+        const hopResults = await this._parametricFirstHop(query, limit);
+        if (hopResults !== null) {
+          return { results: hopResults };
+        }
+      } catch {
+        // Degrade silently — the cascade below is the fallback.
+      }
+    }
+
     const tier = tokenBudget >= 50_000 ? 'raw-heavy'
       : tokenBudget >= 20_000 ? 'mixed'
       : 'card-only';
@@ -681,6 +730,57 @@ export class SearchEngine {
     const m = q.match(/\b(step|part|v|version|stage|phase|section|chapter|round|level)\s*(\d+)\b/i);
     if (!m) return null;
     return `${m[1].toLowerCase()} ${m[2]}`;
+  }
+
+  /**
+   * P2-0 · Parametric first-hop recall.
+   *
+   * Asks the attached broker for O(1) exact recall. The broker's recall
+   * already applies M1's ParametricMemory relative-zero threshold
+   * (|qF| ≤ 1e-5·|F| → no binding). We simply check whether any non-null
+   * values came back — if so, it's a hit and we format the results.
+   *
+   * Returns:
+   *   - object[] (formatted results) on hit
+   *   - null on miss / no session / any error (caller falls through to cascade)
+   *
+   * The broker interface is:
+   *   - getActiveSessionId() → string | null
+   *   - recall(sessionId, query, topK) → [{value, score}, …]
+   *
+   * This is intentionally thin: the hit/miss criterion and the read
+   * path are M1's; the SDK only routes the query and formats the output.
+   */
+  async _parametricFirstHop(query, limit) {
+    const broker = this._parametricBroker;
+    if (!broker) return null;
+
+    const sessionId = typeof broker.getActiveSessionId === 'function'
+      ? broker.getActiveSessionId()
+      : null;
+    if (!sessionId) return null;
+
+    const topK = Math.max(1, limit);
+    const hits = await broker.recall(sessionId, query, topK);
+    if (!Array.isArray(hits) || hits.length === 0) return null;
+
+    // Filter out null-value entries (miss / chance-level decode).
+    const valid = hits.filter((h) => h && h.value != null);
+    if (valid.length === 0) return null;
+
+    // Format to the same shape as cascade results (opacity: no
+    // channel/mode fields). Parametric hits are exact bindings, so
+    // they get a high score and a distinctive type.
+    return valid.map((h, i) => ({
+      id: `parametric_${i}`,
+      type: 'parametric_binding',
+      title: String(h.value),
+      summary: String(h.value),
+      score: h.score ?? 1.0,
+      tokens_est: Math.ceil(String(h.value).length / 4),
+      tags: [],
+      created_at: null,
+    }));
   }
 
   /**

@@ -1,0 +1,205 @@
+name: CI
+
+# 治理工程化（F-070）：GOVERNANCE §3 门禁的机械执行层。
+# 参考姊妹仓 M1 的 ci.yml 门禁纪律；JS 侧分两层——
+#   1. PR 相关套件（parametric first-hop / hooks / unified-cascade-search）为阻塞门禁；
+#   2. 全量 JS 套件当前存在 sync 带来的存量失败（~23，属上游 Awareness-Market 同步缺口，
+#      修复责任在上游 sync），先以非阻塞方式持续暴露，不静默跳过。
+# LongMemEval 基准不进 CI（277MB 数据集 + ~17 分钟/轮），按 GOVERNANCE §3 走
+# benchmarks/longmemeval/run_ab.sh 人工触发、产物入库。
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# OpenSSF Scorecard Token-Permissions：workflow token 最小权限（只读）。
+permissions:
+  contents: read
+
+jobs:
+  python-tests:
+    name: Python 全量测试（py${{ matrix.python-version }}，含覆盖率）
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # pyproject 声称 requires-python >=3.9 —— 最低声称版本必须有实测腿
+        # （3.9 兼容 pin 组由 uv 在本地实跑验证：240 passed @ 3.9.6）。
+        include:
+          - python-version: "3.12"
+            pins: "pytest==9.1.1 requests==2.34.2 pydantic==2.13.5 numpy==2.5.3 pytest-cov==7.1.0"
+          - python-version: "3.9"
+            pins: "pytest==8.4.2 requests==2.32.5 pydantic==2.13.5 numpy==2.0.2 pytest-cov==7.1.0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install test dependencies
+        run: pip install ${{ matrix.pins }}
+        # numpy: _dev_stubs/parametric_memory.py (contract-test stub) uses it
+      - name: Import + trace smoke test
+        working-directory: python
+        run: python scripts/ci_trace_smoke.py
+      - name: Run full test suite
+        working-directory: python
+        run: |
+          set -o pipefail
+          python -m pytest tests/ --ignore=tests/test_sdk_functional.py -q \
+            --cov=memory_cloud --cov-report=term-missing:skip-covered | tee /tmp/pytest-out.txt
+        # test_sdk_functional.py 需要 live server（localhost:8000），为存量环境性排除，
+        # 见 HANDOFF 与 PR #1 说明。
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Python tests py${{ matrix.python-version }}（GOVERNANCE §3 门禁）"
+            echo '```'
+            tail -n 14 /tmp/pytest-out.txt 2>/dev/null || echo "(无输出)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  claims-register:
+    name: 主张登记簿校验（§7 + CLAIMS + ADR 索引）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check claims register (GOVERNANCE §7 + CLAIMS.md, F-070/F-073)
+        run: |
+          set -o pipefail
+          python3 scripts/check_claims.py --verbose | tee /tmp/claims-out.txt
+      - name: Check ADR index consistency (F-071 事故教训的谱系 lint)
+        run: |
+          set -o pipefail
+          python3 scripts/check_adr_index.py | tee /tmp/adr-out.txt
+      - name: Check version sync (版本漂移守门：包元数据 ↔ CHANGELOG 最新发布)
+        run: |
+          set -o pipefail
+          python3 scripts/check_version_sync.py | tee /tmp/ver-out.txt
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## 主张登记簿校验（GOVERNANCE §7 + CLAIMS.md）"
+            echo '```'
+            tail -n 12 /tmp/claims-out.txt 2>/dev/null || echo "(无输出)"
+            echo '```'
+            echo "## ADR 索引一致性"
+            echo '```'
+            tail -n 6 /tmp/adr-out.txt 2>/dev/null || echo "(无输出)"
+            echo '```'
+            echo "## 版本一致性"
+            echo '```'
+            tail -n 6 /tmp/ver-out.txt 2>/dev/null || echo "(无输出)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  js-pr-gate:
+    name: JS PR 相关套件（50 例门禁）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: local
+        run: npm ci
+      - name: PR-relevant suite (parametric first-hop / hooks / cascade)
+        working-directory: local
+        run: |
+          set -o pipefail
+          node --test test/parametric-first-hop.test.mjs test/parametric-hooks.test.mjs test/unified-cascade-search.test.mjs | tee /tmp/js-pr.txt
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## JS PR 相关套件（GOVERNANCE §3 门禁）"
+            echo '```'
+            echo "pass: $(grep -cE '^✔' /tmp/js-pr.txt 2>/dev/null || echo 0)"
+            grep -E '^✖' /tmp/js-pr.txt 2>/dev/null | head -n 10 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # 其余 SDK 包的门禁（2026-09-08 工程化盘点：四包有测试但 CI 零覆盖）。
+  # 本地预跑实测：typescript 64 / openclaw 203 (vitest) / setup-cli 84 /
+  # browser-extension 32+1 —— browser-extension 的 chaos-daemon 套件 import
+  # 路径指到仓库外（../../../scripts/chaos-helpers.mjs，helper 文件不在本仓），
+  # 属上游 sync 缺口（同 _shared/prompts/ 类），按 F-070 先例非阻塞持续暴露，
+  # 修复责任在上游 sync。
+  sdk-packages:
+    name: SDK 包测试（${{ matrix.pkg }}）
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pkg: typescript
+            run: npm test
+          - pkg: openclaw
+            run: npm test
+          - pkg: setup-cli
+            run: npm test
+          - pkg: browser-extension
+            run: node --test test/rulepack-signature.test.mjs test/rulepack-match.test.mjs test/rulepack-sign-interop.test.mjs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: ${{ matrix.pkg }}
+        run: npm ci
+      - name: Tests（阻塞门禁）
+        working-directory: ${{ matrix.pkg }}
+        run: ${{ matrix.run }}
+      - name: Known sync-gap suite（非阻塞 · 持续暴露）
+        if: matrix.pkg == 'browser-extension'
+        working-directory: browser-extension
+        continue-on-error: true
+        run: node --test test/chaos-daemon.test.mjs
+      - name: Manifest lint（browser-extension）
+        if: matrix.pkg == 'browser-extension'
+        working-directory: browser-extension
+        run: npm run lint:manifest
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## SDK 包 ${{ matrix.pkg }}"
+            echo '```'
+            echo "pkg=${{ matrix.pkg }} run=${{ matrix.run }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  js-full-suite:
+    name: JS 全量套件（非阻塞 · 存量失败跟踪）
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: local
+        run: npm ci
+      - name: Full JS suite
+        working-directory: local
+        run: |
+          set -o pipefail
+          node --test test/*.test.mjs | tee /tmp/js-full.txt
+      - name: Failure report → step summary
+        if: failure()
+        run: |
+          {
+            echo "## JS 全量套件失败清单（非阻塞 · 存量失败跟踪，修复责任在上游 sync）"
+            echo '```'
+            grep -E '^✖' /tmp/js-full.txt 2>/dev/null | head -n 40 || echo "(无 ✖ 行——检查退出原因)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

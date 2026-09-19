@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# marathon_guard — 防双马拉松锁检查(AMM-001 移植自 Physic AMM-005 体系)
+#
+# 原理:.loop-lock 由马拉松循环内每轮必跑的 goal_check 自动刷新;
+# 本脚本只读检查锁的新鲜度:
+#   exit 0 = 放行(无锁 = 无马拉松;或锁已过期 = 马拉松已死)
+#   exit 1 = 让位(锁新鲜 = 有马拉松在运行)
+#
+# 用法:粘贴/启动马拉松前先跑本脚本;exit 0 才开始迭代。
+set -u
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+LOCK="$REPO/.loop-lock"
+TTL=6000   # 100 分钟(秒)
+
+[ -f "$LOCK" ] || { echo "GO(无锁)"; exit 0; }
+mtime=$(stat -f %m "$LOCK" 2>/dev/null || stat -c %Y "$LOCK" 2>/dev/null || echo 0)
+age=$(( $(date +%s) - mtime ))
+if [ "$age" -lt "$TTL" ]; then
+  echo "BUSY(锁龄 ${age}s < ${TTL}s)"
+  exit 1
+fi
+echo "GO(锁已过期 ${age}s)"
+exit 0

@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# goal_check — 目标校验路由器(AMM-001 移植自 AwareLiquid-Physic;SDK 适配版)
+#
+# 每轮心跳第一步:
+#   0. 门禁三件套(check_claims / check_adr_index / check_version_sync) →
+#      任一非零 → VERDICT: GATE-RED(退出码 4;禁蒸馏/队列迭代,先修门禁)
+#   1. 读 GOALS.md goal_queue 顶部 → 执行 check_cmd →
+#      通过   → VERDICT: ACHIEVED(弹出顶部并写回 GOALS.md,晋升下一位)
+#      不通过 → VERDICT: NOT-Achieved(对当前目标迭代一步,未达成不停)
+#   2. 队列空时 → VERDICT: QUEUE-EMPTY(退出码 2;工程化蒸馏轮)
+#
+# 退出码:0=ACHIEVED 1=NOT-Achieved 2=QUEUE-EMPTY 4=GATE-RED
+# (3 号码保留给未来 MINING-FROZEN 平衡闸,见 AMENDMENTS 候选)
+set -euo pipefail
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+GOALS="$REPO/docs/loop/GOALS.md"
+date +%s > "$REPO/.loop-lock"   # 马拉松存活心跳(供 marathon_guard 新鲜度检查)
+
+python3 - "$GOALS" "$REPO" <<'EOF'
+import os, subprocess, sys
+
+path, repo = sys.argv[1], sys.argv[2]
+
+# ---- 0. 门禁三件套(GATE-RED 优先;SDK 版 DEBT-FIRST) ----
+# 门禁脚本缺失(非红) = 降级纯队列路由,不阻塞(同 Physic gauge 降级先例);
+# 存在且非零 = GATE-RED。
+GATES = (
+    ("claims", f"{repo}/scripts/check_claims.py"),
+    ("adr-index", f"{repo}/scripts/check_adr_index.py"),
+    ("version-sync", f"{repo}/scripts/check_version_sync.py"),
+)
+red = []
+for name, script in GATES:
+    if not os.path.isfile(script):
+        print(f"  [门禁 {name} 缺失,降级跳过]")
+        continue
+    rc = subprocess.run([sys.executable, script, "--root", repo],
+                        capture_output=True, text=True)
+    if rc.returncode != 0:
+        tail = (rc.stdout + rc.stderr).strip().splitlines()
+        red.append((name, tail[-1] if tail else f"exit={rc.returncode}"))
+if red:
+    print("VERDICT: GATE-RED — 门禁有红,先修门禁(禁蒸馏/禁队列迭代):")
+    for name, msg in red:
+        print(f"  - {name}: {msg}")
+    sys.exit(4)
+
+# ---- 1. 队列路由 ----
+src = open(path).read()
+import re
+block_m = re.search(r"```yaml\ngoal_queue:\n(.*?)```", src, re.S)
+if not block_m:
+    print("VERDICT: QUEUE-EMPTY"); sys.exit(2)
+
+FIELDS = ("track", "goal", "done_condition", "check_cmd")
+entries, cur = [], None
+for line in block_m.group(1).splitlines():
+    m = re.match(r"\s*- id: (\S+)", line)
+    if m:
+        cur = {"id": m.group(1), **{f: "" for f in FIELDS}}
+        entries.append(cur); continue
+    if cur is not None:
+        for f in FIELDS:
+            mm = re.match(rf"\s*{f}: (.*)", line)
+            if mm:
+                cur[f] = mm.group(1)
+if not entries:
+    print("VERDICT: QUEUE-EMPTY"); sys.exit(2)
+
+top, rest = entries[0], entries[1:]
+if not top["check_cmd"].strip():
+    # 空 check_cmd 时 subprocess.call("") 返回 0 ⇒ 假阳性 ACHIEVED 误弹
+    # (Physic 轮 62 实付 1 cycle 的教训,移植内建)。空命令不构成验收。
+    print(f"VERDICT: NOT-Achieved — [{top['id']}] check_cmd 为空(假阳性防护),按未达成路由")
+    print(f"  done_condition: {top['done_condition']}")
+    sys.exit(1)
+rc = subprocess.call(top["check_cmd"], shell=True, cwd=repo)
+if rc != 0:
+    print(f"VERDICT: NOT-Achieved — 对 [{top['id']}] {top['goal']} 迭代一步")
+    print(f"  done_condition: {top['done_condition']}")
+    sys.exit(1)
+
+def fmt(e):
+    return (f"- id: {e['id']}\n"
+            f"    track: {e['track']}\n"
+            f"    goal: {e['goal']}\n"
+            f"    done_condition: {e['done_condition']}\n"
+            f"    check_cmd: {e['check_cmd']}")
+
+new_block = ("```yaml\ngoal_queue:\n" + "\n".join(fmt(e) for e in rest) + "\n```") if rest \
+            else "```yaml\ngoal_queue: []\n```"
+open(path, "w").write(src.replace(block_m.group(0), new_block))
+nxt = rest[0]["id"] if rest else "(队列空,进入工程化蒸馏轮)"
+print(f"VERDICT: ACHIEVED — 弹出 {top['id']},晋升 {nxt}")
+print("  收尾义务:判读写 docs/loop/LOOP-LOG.md + RSI-INDEX/DEBT-LEDGER 回填 + 原子提交")
+EOF

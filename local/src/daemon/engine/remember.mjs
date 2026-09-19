@@ -15,6 +15,7 @@
 import { classifyNoiseEvent, cleanContent } from '../../core/noise-filter.mjs';
 import { runLifecycleChecks } from '../../core/lifecycle-manager.mjs';
 import { shouldRequestExtraction, buildExtractionInstruction } from '../extraction-instruction.mjs';
+import { onRecordSuccess } from '../parametric-hooks.mjs';
 
 /**
  * @param {object} daemon - AwarenessLocalDaemon instance
@@ -181,6 +182,18 @@ export async function remember(daemon, params) {
   if (lifecycle.archived > 0) {
     result.archived_count = lifecycle.archived;
   }
+
+  // P2-1 · parametric broker write hook (consolidation_write, default off).
+  // Fire-and-forget — never blocks the record response.
+  onRecordSuccess(daemon, {
+    id,
+    content: contentForPersist,
+    title,
+    type: memory.type,
+    session_id: memory.session_id,
+    source: memory.source,
+    tags: memory.tags,
+  }).catch(() => {});
 
   return result;
 }

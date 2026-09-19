@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased]
+
+### Added - parametric memory integration (unreleased; integration/broker-parametric)
+
+- Optional parametric first-hop stage in `unifiedCascadeSearch`
+  (`opts.parametricFirstHop`, default **off**): with a parametric broker
+  attached, an O(1) exact-recall hit short-circuits the cascade; on miss,
+  absence, or failure the existing E5 + FTS5 cascade runs unchanged. The
+  off-state is bit-identical — locked by unit tests and verified over a
+  full 500-question LongMemEval same-environment A/B (zero per-question
+  delta against the pre-change code).
+- Parametric broker event hooks: record-success → broker write, conflict
+  supersession → forget(old) + write(new), session end → snapshot. The
+  `consolidation_write` / `conflict_forget` switches are independent and
+  default **off** until the upstream consolidation policy lands and real
+  integration passes (repo governance §4).
+- Benchmarks: `benchmarks/longmemeval/run_f053_daemon_path.mjs` (the
+  daemon-path LongMemEval_S runner the README references) is now in-repo,
+  plus `run_ab.sh` for same-environment A/B gate reruns.
+- CI: GitHub Actions — Python suite gate, claims-register check, and a JS
+  two-tier split (PR-relevant suite blocking; full suite non-blocking while
+  upstream sync gaps are open).
+
 ## [0.12.5] - 2026-08-28
 
 ### Fixed - the README example did not work

@@ -1,0 +1,76 @@
+name: LongMemEval Benchmark (on-demand)
+
+# 按需门禁基准（GOVERNANCE §3 执行设施）：手动触发，跑 f053 daemon-path
+# runner 并归档证据产物。全量 500 题 ~17 分钟；首次会下载 277MB 数据集与
+# ONNX 模型。结果为人工裁决材料——不改变 PR 的 merge 状态（门禁裁决权
+# 在上游，见 F-071 Proposed）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "single = 仅当前分支；ab = 当前分支 vs 基线逐题对比"
+        required: false
+        default: single
+        type: choice
+        options: [single, ab]
+      runner_args:
+        description: "透传给 runner 的参数（如 --limit=20 冒烟）"
+        required: false
+        default: ""
+      base_ref:
+        description: "A/B 模式的基线 ref"
+        required: false
+        default: "origin/main"
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: local
+        run: npm ci
+      - name: Download LongMemEval_S dataset (sha256-pinned, evidence reproducibility)
+        run: |
+          curl -sL -o benchmarks/longmemeval/longmemeval_s_cleaned.json \
+            "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/main/longmemeval_s_cleaned.json"
+          echo "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442  benchmarks/longmemeval/longmemeval_s_cleaned.json" | shasum -a 256 -c -
+          ls -la benchmarks/longmemeval/longmemeval_s_cleaned.json
+      - name: Run benchmark (single)
+        if: inputs.mode == 'single'
+        working-directory: benchmarks/longmemeval
+        run: |
+          set -o pipefail
+          node run_f053_daemon_path.mjs ${{ inputs.runner_args }} | tee /tmp/bench.txt
+      - name: Run benchmark (A/B)
+        if: inputs.mode == 'ab'
+        env:
+          RUNNER_ARGS: ${{ inputs.runner_args }}
+        run: |
+          bash benchmarks/longmemeval/run_ab.sh "${{ inputs.base_ref }}" | tee /tmp/bench-ab.txt
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: longmemeval-evidence
+          path: |
+            benchmarks/longmemeval/results_*.json
+            /tmp/bench.txt
+            /tmp/bench-ab.txt
+          if-no-files-found: warn
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## LongMemEval 基准（${{ inputs.mode || 'single' }}）"
+            echo '```'
+            tail -n 30 /tmp/bench.txt 2>/dev/null || true
+            tail -n 30 /tmp/bench-ab.txt 2>/dev/null || true
+            echo '```'
+            echo "证据产物见 artifact: longmemeval-evidence"
+          } >> "$GITHUB_STEP_SUMMARY"

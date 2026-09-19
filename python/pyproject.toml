@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "awareness-memory-cloud"
-version = "2.6.0"
+version = "2.7.0"
 description = "Python SDK for Awareness Memory Cloud"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -53,6 +53,9 @@ autogen = [
   "autogen-agentchat>=0.2.0",
   "openai>=1.0.0"
 ]
+parametric = [
+  "mt-lnn[memory_broker] @ git+https://github.com/everest-an/M1.git"
+]
 frameworks = [
   "langchain>=0.1.0",
   "crewai-tools>=0.0.1",
@@ -69,3 +72,6 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["memory_cloud*"]
+
+[tool.setuptools.package-data]
+memory_cloud = ["py.typed"]

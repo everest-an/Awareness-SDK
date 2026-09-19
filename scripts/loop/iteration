@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# iteration — 迭代总开关(GOALS.md mode 的 CLI;AMM-001 移植自 Physic AMM-003)
+#
+# 用法:
+#   ./scripts/loop/iteration start                 # ON,沿用现有 goal
+#   ./scripts/loop/iteration start "新的 goal 文本" # ON 并替换 current_action
+#   ./scripts/loop/iteration stop                  # OFF(心跳只确认不干活)
+#   ./scripts/loop/iteration status                # 查看当前开关/goal
+set -euo pipefail
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+GOALS="$REPO/docs/loop/GOALS.md"
+
+cmd="${1:-status}"; shift || true
+case "$cmd" in
+  start)
+    goal="${1:-}"
+    if [ -n "$goal" ]; then
+      python3 - "$GOALS" "$goal" <<'EOF'
+import re, sys
+p, goal = sys.argv[1], sys.argv[2]
+s = open(p).read()
+s = re.sub(r"current_action: >-\n(  .*\n)+",
+           "current_action: >-\n      " + goal.replace("\n", "\n      ") + "\n", s, count=1)
+open(p, "w").write(s)
+EOF
+    fi
+    python3 - "$GOALS" <<'EOF'
+import re, sys, datetime
+p = sys.argv[1]
+s = open(p).read()
+s = re.sub(r"mode: \w+", "mode: ON", s, count=1)
+s = re.sub(r"updated: .*", "updated: " + datetime.datetime.now().strftime("%F %H:%M") + " (iteration start)", s, count=1)
+open(p, "w").write(s)
+EOF
+    echo "mode=ON ${goal:+goal 已更新}"
+    ;;
+  stop)
+    python3 - "$GOALS" <<'EOF'
+import re, sys, datetime
+p = sys.argv[1]
+s = open(p).read()
+s = re.sub(r"mode: \w+", "mode: OFF", s, count=1)
+s = re.sub(r"updated: .*", "updated: " + datetime.datetime.now().strftime("%F %H:%M") + " (iteration stop)", s, count=1)
+open(p, "w").write(s)
+EOF
+    echo "mode=OFF(心跳将只确认不干活)"
+    ;;
+  status)
+    grep -E "^(state|mode|iteration_window):" "$GOALS" || true
+    grep -A2 "current_action:" "$GOALS" | head -3
+    ;;
+  *) echo "用法: iteration {start [goal] | stop | status}"; exit 1 ;;
+esac

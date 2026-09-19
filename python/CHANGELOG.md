@@ -1,5 +1,101 @@
 # Changelog
 
+## [Unreleased] — F-072 trace phase 2 (adopted 2026-09-08)
+
+### Added
+- `transport_error` trace event (vocabulary 7→8, F-072): emitted on FINAL
+  transport failure of daemon/cloud HTTP paths (`op`/`route`/
+  `error_class` connect|timeout|http_status/`status`/`latency_ms`).
+  Content-free; never sampled.
+- Min-interval throttling for high-frequency success events (default OFF):
+  `min_interval_ms=` param or `AWARENESS_TRACE_MIN_INTERVAL_MS` env;
+  suppressed events aggregate into `_suppressed_count` on the next emitted
+  event of the same type. Errors/rare events never sampled.
+- `analyze_trace.py`: `transport_error` aggregation (by op/route/class/status).
+- 15 new tests (tracing 8, analyzer 1, client transport 6). Total: 228 passed.
+
+
+## [2.7.0] - 2026-09-04
+
+### Added — MemoryCloudParametric adapter (M1 broker integration)
+- New `memory_cloud.integrations.parametric.MemoryCloudParametric` adapter
+  bridging the SDK to M1's `mt_lnn.memory_broker.MemoryBroker`. Same shape
+  as the langchain/crewai/praisonai/autogen adapters (inherits
+  `MemoryCloudBaseAdapter`): `wrap_llm`, `wrap_function`,
+  `get_tool_functions`, `memory_search`, `memory_write`, `memory_insights`,
+  `inject_into_messages`.
+- Direct parametric operations: `parametric_write`, `parametric_recall`,
+  `parametric_forget`, `parametric_snapshot`, `parametric_restore`,
+  `parametric_state_bytes`, `parametric_sessions`.
+- Dependency direction SDK→M1 (one-way); only imports
+  `mt_lnn.memory_broker` via try/except — silently degrades to logged
+  warnings when the package is absent. Daemon channel
+  (`localhost:37800`) untouched; broker unavailable → graceful fallback.
+- New optional dependency: `pip install 'awareness-memory-cloud[parametric]'`
+  (pulls `mt_lnn[memory_broker]` from `git+github.com/everest-an/M1`).
+- `examples/parametric_quickstart.py` — runnable demo with and without
+  a broker.
+- 28 new tests. Total Python SDK: 160 passed, 21 skipped.
+
+### Added — Session migration CLI (export/import)
+- New `memory_cloud.session_migrate` module: `export_session()` and
+  `import_session()` for cross-process parametric memory transfer via
+  `MemoryBroker.snapshot/restore`. Package format reuses the existing
+  zip+JSONL convention from `export_reader.py` (manifest.json +
+  parametric/snapshot.json + parametric/bindings.jsonl).
+- CLI: `python -m memory_cloud.session_migrate export/import
+  --session-id <id> --output/--input <path>`.
+- `examples/migrate_session.py` — process A writes → snapshot → exit;
+  process B restore → recall all bindings (bit-exact), including
+  cross-directory migration and corrupt-archive rejection.
+- Bit-exactness covers the parametric layer only (F, z tensors + lexicon).
+  The SQLite episodic layer is NOT in the guarantee — both layers are
+  independently exportable.
+- 12 new tests. Total Python SDK: 172 passed, 21 skipped.
+
+### Added — SDK-level trace + governance (F-069)
+- New `memory_cloud.tracing`: JSONL trace writer (M1-compatible envelope
+  `{ts, event, session_id, channel}`, field naming per OTel GenAI semconv,
+  no OTel dependency). Seven events: recall / write / forget / snapshot /
+  restore / conflict_forget / broker_unavailable.
+- Default off (`trace_path` param or `AWARENESS_TRACE_PATH`); hash-only
+  by default (sha256 first-16), `trace_full_content=True` opts in to raw
+  text; writer never throws — I/O failure self-disables it.
+- Wired: client.record/retrieve (daemon + cloud routes, latency_ms),
+  parametric adapter (5 ops + degrade paths), session_migrate
+  (optional `trace=` writer param).
+- Governance: root `GOVERNANCE.md` (dependency boundary, decision
+  ownership, merge gates, defaults policy, claims register),
+  `docs/decisions/` MADR-lite ADRs F-061..F-069,
+  `.github/PULL_REQUEST_TEMPLATE.md` (M1-style gate checklist).
+- 19 new trace tests. Trace-off path covered by full existing suite.
+
+### Added — governance execution infrastructure (F-070)
+- `scripts/analyze_trace.py`: aggregate a trace JSONL into the GOVERNANCE §6
+  evidence numbers (recall hit-rate by route, `broker_unavailable` frequency
+  by op/reason, latency p50/p95). Stdlib only; malformed lines are skipped
+  and counted; unknown events degrade to an `other` bucket. 8 tests.
+- `MemoryTraceWriter` optional `max_bytes` rotation (single `<path>.1` slot,
+  default off, `AWARENESS_TRACE_MAX_BYTES` env supported). Rotation failure
+  follows the never-throw self-disable path. 4 new rotation tests.
+- `scripts/check_claims.py`: mechanical GOVERNANCE §7 claims-register check —
+  README number claims must be registered (or in a §7-pointed artifact) or
+  carry a visible source; wired into CI.
+- `.github/workflows/ci.yml`: Python full suite + import/trace smoke +
+  claims check as blocking jobs; JS two-tier (PR-relevant 50 blocking,
+  full suite non-blocking while upstream sync gaps are open).
+- `benchmarks/longmemeval/run_f053_daemon_path.mjs` now lives in-repo
+  (previously only in Awareness-Market; sole change = SDK path for this
+  layout) plus `run_ab.sh`, a same-environment A/B gate rerun helper
+  (base worktree + dual run + per-question diff).
+
+### Fixed
+- `examples/parametric_quickstart.py`: the no-broker demo used a MagicMock
+  client, so `AWARENESS_TRACE_PATH` was never consumed and the demo could
+  not show trace output. It now uses a real client (parametric ops never
+  dial HTTP) — graceful degradation is observable: broker_unavailable
+  events land in the trace file, with an `analyze_trace.py` hint printed.
+
 ## [2.6.0] - 2026-04-19
 
 ### Added — F-059 skill fields + F-060 client-side HyDE
