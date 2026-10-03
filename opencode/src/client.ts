@@ -198,7 +198,7 @@ export class AwarenessClient {
       return this.localSearch(opts);
     }
 
-    const query = opts.semanticQuery;
+    const query = opts.semanticQuery ?? opts.query;
     const legacyFullTextWeight = (opts as unknown as Record<string, unknown>)[LEGACY_FULL_TEXT_WEIGHT_KEY];
 
     const customKwargs: Record<string, unknown> = {
@@ -847,6 +847,8 @@ export class AwarenessClient {
     }
     if (this.projectDir) {
       h["X-Awareness-Project-Dir"] = this.projectDir;
+      // base64 variant — required by the local daemon for non-ASCII (CJK) paths
+      h["X-Awareness-Project-Dir-B64"] = Buffer.from(this.projectDir, "utf8").toString("base64");
     }
     return h;
   }
@@ -856,6 +858,7 @@ export class AwarenessClient {
     const h: Record<string, string> = { "Content-Type": "application/json" };
     if (this.projectDir) {
       h["X-Awareness-Project-Dir"] = this.projectDir;
+      h["X-Awareness-Project-Dir-B64"] = Buffer.from(this.projectDir, "utf8").toString("base64");
     }
     return h;
   }
