@@ -95,17 +95,21 @@ export class AwarenessClient {
   readonly sessionId: string;
   readonly isLocal: boolean;
   private readonly localOrigin: string;
+  /** Project/workspace dir — sent as X-Awareness-Project-Dir so memory is scoped per project (no cross-project pollution). */
+  private readonly projectDir: string;
 
   constructor(
     baseUrl: string,
     apiKey: string,
     memoryId: string,
     agentRole?: string,
+    projectDir?: string,
   ) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
     this.apiKey = apiKey;
     this.memoryId = memoryId;
     this.agentRole = agentRole;
+    this.projectDir = String(projectDir ?? "").trim();
     this.sessionId = `opencode-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     this.isLocal = !apiKey && /localhost|127\.0\.0\.1/.test(baseUrl);
@@ -119,7 +123,7 @@ export class AwarenessClient {
   private async mcpCall<T>(toolName: string, args: Record<string, unknown>): Promise<T> {
     const response = await fetch(`${this.localOrigin}/mcp`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.mcpHeaders(),
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: Date.now(),
@@ -151,7 +155,7 @@ export class AwarenessClient {
   private async mcpCallRaw(toolName: string, args: Record<string, unknown>): Promise<Array<{ type: string; text: string }>> {
     const response = await fetch(`${this.localOrigin}/mcp`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.mcpHeaders(),
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: Date.now(),
@@ -840,6 +844,18 @@ export class AwarenessClient {
     };
     if (this.apiKey) {
       h.Authorization = `Bearer ${this.apiKey}`;
+    }
+    if (this.projectDir) {
+      h["X-Awareness-Project-Dir"] = this.projectDir;
+    }
+    return h;
+  }
+
+  /** Headers for the local MCP JSON-RPC endpoint (still carries project-dir for scoping). */
+  private mcpHeaders(): Record<string, string> {
+    const h: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.projectDir) {
+      h["X-Awareness-Project-Dir"] = this.projectDir;
     }
     return h;
   }

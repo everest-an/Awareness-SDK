@@ -24,6 +24,7 @@ import {
   syncIdeMcpTomlConfig,
   syncIdeRules,
   syncOpenClawConfig,
+  syncOpencodeConfig,
 } from "./rules.mjs";
 
 import {
@@ -524,6 +525,11 @@ async function syncOneIde({ ideId, argv, dryRun, force }) {
     return syncOneIdeOpenClaw({ argv, dryRun });
   }
 
+  // --- OpenCode / HyperCode: rules (AGENTS.md) + native plugin in the config `plugin` array ---
+  if (ideId === "opencode") {
+    return syncOneIdeOpencode({ dryRun });
+  }
+
   const result = syncIdeRules({ ideId, dryRun, force });
 
   if (!result.ok) {
@@ -683,6 +689,49 @@ async function syncOneIdeOpenClaw({ argv, dryRun }) {
     }
   }
 
+  return 0;
+}
+
+/**
+ * OpenCode / HyperCode sync: write awareness rules into AGENTS.md (managed block)
+ * and add the native Awareness plugin to the config `plugin` array. Works in both
+ * local and cloud mode (the plugin auto-detects the local daemon or uses creds).
+ */
+async function syncOneIdeOpencode({ dryRun }) {
+  const result = syncIdeRules({ ideId: "opencode", dryRun });
+  if (!result.ok) {
+    console.error(`Conflict while syncing ${result.filePath}: ${result.reason}`);
+    return 1;
+  }
+  const label = {
+    create: dryRun ? "Would create" : "Created",
+    append: dryRun ? "Would append" : "Appended",
+    replace: dryRun ? "Would replace" : "Replaced",
+    noop: "Already up to date",
+  }[result.action] ?? result.action;
+  if (result.action === "noop") console.log(`✓ ${result.filePath} ${label.toLowerCase()}.`);
+  else {
+    console.log(`✓ ${label} ${result.filePath}`);
+    if (dryRun) console.log(result.content);
+  }
+
+  const pluginResult = syncOpencodeConfig({ dryRun });
+  if (!pluginResult.ok) {
+    console.error(`Conflict while syncing ${pluginResult.filePath}: ${pluginResult.reason}`);
+    return 1;
+  }
+  const pLabel = {
+    create: dryRun ? "Would create" : "Created",
+    replace: dryRun ? "Would update" : "Updated",
+    noop: "Already up to date",
+  }[pluginResult.action] ?? pluginResult.action;
+  if (pluginResult.action === "noop") console.log(`✓ ${pluginResult.filePath} ${pLabel.toLowerCase()}.`);
+  else {
+    console.log(`✓ ${pLabel} ${pluginResult.filePath}`);
+    if (dryRun) console.log(pluginResult.content);
+  }
+
+  console.log("ℹ Awareness plugin (@awareness.market/opencode-plugin) wired in. Restart opencode / HyperCode to apply.");
   return 0;
 }
 
@@ -946,6 +995,11 @@ async function syncOneIdeLocal({ ideId, dryRun, force }) {
   if (ideId === "openclaw") {
     console.log("ℹ OpenClaw requires cloud mode. Run: npx @awareness.market/setup --cloud");
     return 1;
+  }
+
+  // OpenCode / HyperCode: rules (AGENTS.md) + native plugin (works local + cloud)
+  if (ideId === "opencode") {
+    return syncOneIdeOpencode({ dryRun });
   }
 
   // --- Sync workflow rules (same as cloud mode) ---
