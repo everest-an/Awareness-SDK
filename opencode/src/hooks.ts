@@ -9,7 +9,7 @@
 
 import type { Event, OpencodeClient } from "@opencode-ai/sdk";
 import type { AwarenessClient } from "./client";
-import type { PluginConfig, PerceptionSignal } from "./types";
+import type { PluginConfig } from "./types";
 
 // ---------------------------------------------------------------------------
 // Metadata envelope stripper (ported from sdks/_shared/js/envelope-strip.mjs)
@@ -65,6 +65,11 @@ function shouldCapture(content: string): boolean {
   return true;
 }
 
+/** Clear dedup state on dispose — leaves no residue after opencode exits. */
+export function clearCaptureCache(): void {
+  _captureHashCache.clear();
+}
+
 // ---------------------------------------------------------------------------
 // Message extraction
 // ---------------------------------------------------------------------------
@@ -97,7 +102,7 @@ function flattenMessages(list: Array<{ info: { role: string }; parts: unknown[] 
 }
 
 /** Build a concise turn brief from a message list (mirrors the OpenClaw plugin). */
-function buildTurnBrief(messages: RawMessage[]): string {
+function buildTurnBrief(messages: RawMessage[]): { summary: string; count: number } {
   let firstUserContent = "";
   let lastAssistantContent = "";
   let messageCount = 0;
@@ -114,55 +119,91 @@ function buildTurnBrief(messages: RawMessage[]): string {
     }
   }
 
-  if (messageCount === 0) return "";
+  if (messageCount === 0) return { summary: "", count: 0 };
 
   const parts: string[] = [];
   if (firstUserContent) parts.push(`Request: ${firstUserContent.slice(0, 300)}`);
   if (lastAssistantContent) parts.push(`Result: ${lastAssistantContent.slice(0, 400)}`);
   parts.push(`Turns: ${messageCount} messages`);
-  return parts.join("\n");
+  return { summary: parts.join("\n"), count: messageCount };
 }
 
 // ---------------------------------------------------------------------------
 // Register the auto-capture event hook.
 // ---------------------------------------------------------------------------
 
+// Injected into opencode's compaction prompt — keeps the summary a STRUCTURED
+// handoff instead of re-cramming the whole conversation back into the prompt.
+const COMPACTION_BRIEF = [
+  "Awareness persistent memory is active for this session.",
+  "When compacting, produce a STRUCTURED handoff that preserves: (1) the current objective,",
+  "(2) decisions made and why, (3) open/incomplete tasks, (4) hard constraints and pitfalls,",
+  "(5) files currently being edited. Drop raw tool output and long logs — the full history stays",
+  "retrievable via awareness_recall(query=\"...\"), so do NOT re-inline it into the prompt.",
+].join(" ");
+
+/** Best-effort, non-blocking capture. Never throws, never blocks the idle path. */
+async function captureSession(
+  client: AwarenessClient,
+  config: PluginConfig,
+  oc: OpencodeClient,
+  sessionID: string,
+): Promise<void> {
+  try {
+    const res = await oc.session.messages({
+      path: { id: sessionID },
+      query: { limit: 200 },
+    });
+    const list = res.data ?? [];
+    const { summary, count } = buildTurnBrief(
+      flattenMessages(list as Array<{ info: { role: string }; parts: unknown[] }>),
+    );
+    if (!summary) return;
+    // 不污染: skip trivial sessions (captureMinTurns) + dedup identical summaries.
+    if (count < (config.captureMinTurns ?? 0)) return;
+    if (!shouldCapture(summary)) return;
+
+    await client.record(summary, {
+      event_type: "turn_brief",
+      source: "opencode-plugin",
+    });
+
+    try {
+      await client.closeSession();
+    } catch {
+      // Session close is best-effort — insights generate on next query.
+    }
+  } catch {
+    // Auto-capture must never break the session.
+  }
+}
+
 export function registerHooks(
   client: AwarenessClient,
   config: PluginConfig,
   oc: OpencodeClient,
 ) {
-  if (!config.autoCapture) return {};
+  const hooks: {
+    event?: (input: { event: Event }) => Promise<void>;
+    "experimental.session.compacting"?: (
+      input: { sessionID: string },
+      output: { context: string[]; prompt?: string },
+    ) => Promise<void>;
+  } = {};
 
-  return {
-    event: async ({ event }: { event: Event }) => {
-      if (event.type !== "session.idle") return;
-      try {
-        const sessionID = event.properties.sessionID;
-        const res = await oc.session.messages({
-          path: { id: sessionID },
-          query: { limit: 200 },
-        });
-        const list = res.data ?? [];
-        const summary = buildTurnBrief(flattenMessages(list as Array<{ info: { role: string }; parts: unknown[] }>));
-        if (!summary || !shouldCapture(summary)) return;
-
-        const captureResult = await client.record(summary, {
-          event_type: "turn_brief",
-          source: "opencode-plugin",
-        });
-
-        const perception = (captureResult as Record<string, unknown>)?.perception;
-        void (perception as PerceptionSignal[] | undefined);
-
-        try {
-          await client.closeSession();
-        } catch {
-          // Session close is best-effort — insights generate on next query.
-        }
-      } catch {
-        // Auto-capture must never break the session.
-      }
-    },
+  // Context-explosion guard — always active (independent of autoCapture).
+  hooks["experimental.session.compacting"] = async (_input, output) => {
+    output.context.push(COMPACTION_BRIEF);
   };
+
+  if (config.autoCapture) {
+    hooks.event = async ({ event }: { event: Event }) => {
+      if (event.type !== "session.idle") return;
+      const sessionID = event.properties.sessionID;
+      // Fire-and-forget — never block the idle path or slow the UI.
+      void captureSession(client, config, oc, sessionID);
+    };
+  }
+
+  return hooks;
 }

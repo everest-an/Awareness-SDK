@@ -1,0 +1,38 @@
+# Awareness SDK
+
+> Local-first persistent memory for AI coding agents. Open source (Apache-2.0), works offline, no account. Native plugins + MCP for OpenCode, Claude Code, Cursor, Windsurf, OpenClaw; Python & TypeScript SDKs. LongMemEval R@5 96.0%.
+
+Awareness gives coding agents cross-session memory: it stores decisions, fixes, workflows and preferences as structured knowledge cards, and recalls the relevant few on demand — keeping the active context window small and stable instead of letting it grow until the session stalls.
+
+## What it is
+- [README](https://github.com/everest-an/Awareness-SDK/blob/main/README.md): overview, quick start, packages, integrations, FAQ
+- [Local daemon](https://github.com/everest-an/Awareness-Market): the actual retrieval pipeline — Markdown storage + SQLite FTS5/hybrid search, MCP server, web dashboard
+- [Docs](https://awareness.market/docs): guides and concepts
+- [Site](https://awareness.market): landing page + cloud (optional)
+
+## Why it is different
+- Local-first and offline: memory is plain Markdown in `.awareness/` — human-readable, git-friendly, no account.
+- Retrieval with zero LLM calls: hybrid BM25 + vector + knowledge-graph, fused with RRF.
+- Benchmarked: 96.0% Recall@5 on LongMemEval through the real daemon pipeline — reproducible via [`benchmarks/longmemeval/run_f053_daemon_path.mjs`](https://github.com/everest-an/Awareness-Market/blob/main/benchmarks/longmemeval/run_f053_daemon_path.mjs)
+- Progressive disclosure: `summary` first, `full` only for the items that matter — no context blow-up.
+
+## Integrations (native plugins + MCP)
+- [OpenCode plugin](https://github.com/everest-an/Awareness-SDK/tree/main/opencode): `@awareness.market/opencode-plugin` — registers `awareness_init / recall / record / lookup` as native tools; structured handoff at compaction
+- [Claude Code](https://github.com/everest-an/Awareness-SDK/tree/main/claudecode): skills + hooks
+- [OpenClaw](https://github.com/everest-an/Awareness-SDK/tree/main/openclaw): native plugin
+- [Setup CLI](https://github.com/everest-an/Awareness-SDK/tree/main/setup-cli): `npx @awareness.market/setup` — auto-detects 13+ IDEs and writes MCP config + workflow rules
+
+## Packages
+- `@awareness.market/local` — local daemon + MCP server
+- `@awareness.market/opencode-plugin` — OpenCode plugin
+- `@awareness.market/setup` — one-command setup for 13+ IDEs
+- `awareness-memory-cloud` (PyPI) · `@awareness-sdk/memory-cloud` (npm) — zero-code interceptors (`wrap_openai` / `wrapOpenAI`)
+
+## Tool surface (MCP)
+`awareness_init` · `awareness_recall` · `awareness_record` · `awareness_lookup` · `awareness_apply_skill` · `awareness_mark_skill_used` · `awareness_get_agent_prompt` · `awareness_facts` · `awareness_related` · `awareness_timeline`
+
+## Citation
+> Awareness (2026). Local-first persistent memory for AI coding agents. everest-an. https://github.com/everest-an/Awareness-SDK
+
+## Optional
+- [License](https://github.com/everest-an/Awareness-SDK/blob/main/LICENSE): Apache-2.0

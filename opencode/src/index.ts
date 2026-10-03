@@ -14,7 +14,7 @@
 import { tool, type Hooks, type Plugin } from "@opencode-ai/plugin";
 import { AwarenessClient } from "./client";
 import { registerTools } from "./tools";
-import { registerHooks } from "./hooks";
+import { registerHooks, clearCaptureCache } from "./hooks";
 import type { PluginConfig } from "./types";
 
 const DEFAULT_BASE_URL = "https://awareness.market/api/v1";
@@ -136,12 +136,16 @@ export const awarenessPlugin: Plugin = async (input, options) => {
   const config = resolveConfig(options);
   const hooks: Hooks = {};
 
+  // Clean teardown — no residue after opencode exits (F: 退出无残留).
+  hooks.dispose = async () => {
+    clearCaptureCache();
+  };
+
   if (config.apiKey && config.memoryId) {
     // Cloud mode
-    const client = new AwarenessClient(config.baseUrl, config.apiKey, config.memoryId, config.agentRole);
+    const client = new AwarenessClient(config.baseUrl, config.apiKey, config.memoryId, config.agentRole, input.directory);
     hooks.tool = registerTools(client);
-    const eventHooks = registerHooks(client, config, input.client);
-    if (eventHooks.event) hooks.event = eventHooks.event;
+    Object.assign(hooks, registerHooks(client, config, input.client));
     return hooks;
   }
 
@@ -151,10 +155,10 @@ export const awarenessPlugin: Plugin = async (input, options) => {
     "",
     config.memoryId || "local",
     config.agentRole,
+    input.directory,
   );
   hooks.tool = registerTools(client);
-  const eventHooks = registerHooks(client, config, input.client);
-  if (eventHooks.event) hooks.event = eventHooks.event;
+  Object.assign(hooks, registerHooks(client, config, input.client));
 
   const hasEnvCreds = Boolean(process.env.AWARENESS_API_KEY && process.env.AWARENESS_MEMORY_ID);
   if (!hasEnvCreds) {

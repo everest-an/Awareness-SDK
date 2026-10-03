@@ -22,7 +22,10 @@ const IDE_ALIASES = {
   vscodecopilot: "copilot",
   "vscode-copilot": "copilot",
   codex: "codex",
-  opencode: "codex",
+  opencode: "opencode",
+  "open-code": "opencode",
+  hypercode: "opencode", // HyperCode is an OpenCode fork — identical config surface
+  "hyper-code": "opencode",
   kiro: "kiro",
   trae: "trae",
   zed: "zed",
@@ -137,7 +140,8 @@ export function autoDetectAllIdes(cwd = process.cwd(), env = process.env) {
     windsurf: () => existsSync(join(cwd, ".windsurfrules")),
     cline: () => existsSync(join(cwd, ".clinerules")),
     copilot: () => existsSync(join(cwd, ".github", "copilot-instructions.md")) || existsSync(join(cwd, ".vscode", "mcp.json")),
-    codex: () => existsSync(join(cwd, "AGENTS.md")),
+    codex: () => existsSync(join(cwd, "AGENTS.md")) && !existsSync(join(cwd, ".opencode")) && !existsSync(join(cwd, "opencode.json")) && !existsSync(join(cwd, "opencode.jsonc")),
+    opencode: () => existsSync(join(cwd, ".opencode")) || existsSync(join(cwd, "opencode.json")) || existsSync(join(cwd, "opencode.jsonc")),
     openclaw: () => {
       const home = env.HOME || env.USERPROFILE || homedir();
       return existsSync(join(home, ".openclaw", "openclaw.json"));
@@ -868,4 +872,64 @@ export function buildMcpSnippet(ideId, options = {}) {
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// OpenCode / HyperCode plugin config helpers
+// OpenCode reads its config from opencode.jsonc / opencode.json (JSONC, may
+// contain comments). We add the native Awareness plugin to the `plugin` array
+// instead of an MCP config — the plugin registers the awareness_* tools itself.
+// ---------------------------------------------------------------------------
+
+const OPENCODE_PLUGIN_ENTRY = "@awareness.market/opencode-plugin";
+
+export function getOpencodeConfigPath(cwd = process.cwd()) {
+  const jsonc = join(cwd, "opencode.jsonc");
+  const json = join(cwd, "opencode.json");
+  if (existsSync(jsonc)) return jsonc;
+  if (existsSync(json)) return json;
+  return jsonc; // default: create opencode.jsonc
+}
+
+/** Strip // and block comments + trailing commas so JSONC parses as JSON. */
+function stripJsonc(text) {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:"'\\])\/\/[^\n\r]*/g, "$1")
+    .replace(/,\s*([}\]])/g, "$1");
+}
+
+export function mergeOpencodeConfigText(existingText, pluginEntry = OPENCODE_PLUGIN_ENTRY) {
+  let base = {};
+  if (existingText != null && existingText.trim()) {
+    try {
+      base = JSON.parse(stripJsonc(existingText));
+    } catch {
+      return { action: "conflict", reason: "existing opencode config is not valid JSON(C)", content: existingText };
+    }
+  }
+  const current = Array.isArray(base.plugin) ? base.plugin : [];
+  const has = current.some((p) => (Array.isArray(p) ? p[0] : p) === pluginEntry);
+  if (has) return { action: "noop", content: existingText ?? "" };
+  const next = { ...base, plugin: [...current, pluginEntry] };
+  return {
+    action: existingText == null ? "create" : "replace",
+    content: `${JSON.stringify(next, null, 2)}\n`,
+  };
+}
+
+export function syncOpencodeConfig(options = {}) {
+  const cwd = options.cwd ?? process.cwd();
+  const dryRun = Boolean(options.dryRun);
+  const fullPath = getOpencodeConfigPath(cwd);
+  const existingText = existsSync(fullPath) ? readFileSync(fullPath, "utf-8") : null;
+  const filePath = fullPath.slice(cwd.length).replace(/^[\\/]/, "");
+  const result = mergeOpencodeConfigText(existingText);
+  if (result.action === "conflict") {
+    return { ok: false, ...result, ideId: "opencode", filePath, fullPath, dryRun };
+  }
+  if (!dryRun && result.action !== "noop") {
+    writeFileSync(fullPath, result.content, "utf-8");
+  }
+  return { ok: true, ...result, ideId: "opencode", filePath, fullPath, dryRun };
 }
