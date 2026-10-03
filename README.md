@@ -12,9 +12,13 @@
 </p>
 
 <p align="center">
-  <strong>Give your AI agent persistent memory across sessions.</strong><br/>
-  Local-first. Works offline. One command to set up. 13+ IDE support.<br/>
+  <strong>Your coding agent forgets everything between sessions. Awareness gives it permanent memory — local-first, offline, no account.</strong><br/>
+  One command to set up · 13+ IDE support · 96.0% R@5 on LongMemEval · zero LLM calls on retrieval<br/>
   <a href="https://awareness.market/docs">Docs</a> · <a href="https://awareness.market">Cloud</a> · <a href="https://discord.com/invite/nMDrT538Qa">Discord</a> · <a href="#quick-start">Quick Start</a>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/everest-an/Awareness-Market/main/assets/branding/local-20s.gif" alt="Awareness — persistent memory for coding agents (20s demo)" style="width:min(1000px,100%);height:auto;" />
 </p>
 
 <p align="center">
@@ -263,6 +267,14 @@ Works with any AI framework:
 | `AWARENESS_API_KEY` | Cloud API key (`aw_...`) | — (local mode: not needed) |
 | `AWARENESS_MEMORY_ID` | Cloud memory ID | — (local mode: auto) |
 | `AWARENESS_AGENT_ROLE` | Agent role filter | `builder_agent` |
+
+---
+
+## ⭐ Support the project
+
+If Awareness saves you from re-explaining your codebase to your AI agent, give the repo a ⭐ — it helps more developers discover the project and pushes it toward GitHub Trending.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=everest-an/Awareness-SDK&type=Date)](https://star-history.com/#everest-an/Awareness-SDK)
 
 ---
 
