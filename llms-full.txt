@@ -1,0 +1,326 @@
+# Awareness SDK — llms-full.txt
+
+> Full concatenated, AI-ingestible content. Generated file — regenerate after major docs changes.
+> Canonical: https://github.com/everest-an/Awareness-SDK
+
+---
+
+<p align="center">
+  <img src="assets/hero-banner.svg" alt="Awareness â€” Long-Term Memory for AI Agents" width="100%"/>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/awareness-memory-cloud/"><img src="https://img.shields.io/pypi/v/awareness-memory-cloud?color=00d4ff&label=PyPI" alt="PyPI"/></a>
+  <a href="https://www.npmjs.com/package/@awareness-sdk/memory-cloud"><img src="https://img.shields.io/npm/v/@awareness-sdk/memory-cloud?color=7b68ee&label=npm" alt="npm"/></a>
+  <a href="https://www.npmjs.com/package/@awareness.market/local"><img src="https://img.shields.io/npm/v/@awareness.market/local?color=22c55e&label=local" alt="local"/></a>
+  <a href="https://awareness.market"><img src="https://img.shields.io/badge/Cloud-awareness.market-5ce0d2" alt="Cloud"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue" alt="License"/></a>
+  <a href="https://discord.com/invite/nMDrT538Qa"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord"/></a>
+</p>
+
+<p align="center">
+  <strong>Give your AI agent persistent memory across sessions.</strong><br/>
+  Local-first. Works offline. One command to set up. 13+ IDE support.<br/>
+  <a href="https://awareness.market/docs">Docs</a> Â· <a href="https://awareness.market">Cloud</a> Â· <a href="https://discord.com/invite/nMDrT538Qa">Discord</a> Â· <a href="#quick-start">Quick Start</a>
+</p>
+
+<p align="center">
+  <a href="https://arxiv.org/abs/2410.10813"><img src="https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen" alt="LongMemEval R@5 96.0%"/></a>
+  <a href="https://awareness.market/sdk-docs/LONGMEMEVAL.md"><img src="https://img.shields.io/badge/benchmark-daemon_path_reproducible-blue" alt="Reproducible daemon-path benchmark"/></a>
+  <a href="https://awareness.market/sdk-docs/ALTERNATIVES.md"><img src="https://img.shields.io/badge/vs_Mem0%2C_Zep%2C_MemPalace-factual_comparison-orange" alt="Factual comparison vs alternatives"/></a>
+</p>
+
+
+---
+
+## Why Awareness?
+
+### Benchmarked, not boasted
+
+**96.0% Recall@5 on [LongMemEval](https://arxiv.org/abs/2410.10813)** â€” measured through the **real local-daemon retrieval pipeline** (`unifiedCascadeSearch` + production E5 embeddings + live SQLite), not an independent harness. Reproducible on any machine: `benchmarks/longmemeval/run_f053_daemon_path.mjs`.
+
+| System | LongMemEval R@5 | Local / zero-API | Notes |
+| --- | ---: | --- | --- |
+| **Awareness (daemon path)** | **96.0%** | Yes | Reproducible, real production pipeline |
+| MemPalace | 96.6% | Yes | R@5 only, raw verbatim |
+| Mem0 | 49.0% (OSS) / 93.4% (self-reported) | Graph = paid | Independent tests differ wildly |
+| Zep | 63.8% | SaaS | Temporal graph, cloud-focused |
+
+> Honest comparisons only â€” see [Awareness vs. Alternatives](https://awareness.market/sdk-docs/ALTERNATIVES.md) for the full factual breakdown.
+
+### What makes it different from a memory store
+
+- **Workflow rules injection** â€” writes rules into your IDE config (CLAUDE.md, .cursor/rules/) so the agent *automatically* initializes memory, recalls before work, and records after changes. No manual orchestration.
+- **Structured knowledge, not snippets** â€” 13 categories: decisions, problem-solutions, workflows, pitfalls, skills, preferences. Conflict detection + dedup built in.
+- **Local-first, zero account** â€” `npx @awareness.market/setup`, data stays on your machine, works offline. Cloud sync optional.
+
+
+AI agents forget everything when a session ends. Your agent spent hours making architectural decisions, fixing bugs, and planning next steps â€” and the next session starts from zero.
+
+**Awareness gives your AI agent persistent memory** â€” it remembers what it built, what it decided, what's still pending, and why.
+
+### How It Works
+
+```
+Session 1: Agent makes decisions, fixes bugs, creates TODOs
+    â†’ awareness_record() saves everything as structured knowledge
+
+Session 2: Agent starts fresh
+    â†’ awareness_init() loads context: "Last time you were working on JWT auth..."
+    â†’ awareness_recall() finds relevant past decisions
+    â†’ Agent picks up where it left off â€” no re-explaining needed
+```
+
+---
+
+## Quick Start
+
+### Option 1: One Command Setup (Recommended)
+
+Works with **Claude Code, Cursor, Windsurf, Cline, GitHub Copilot, Codex, and 7 more IDEs**.
+
+```bash
+npx @awareness.market/setup
+```
+
+That's it. Your AI agent now has persistent memory. No account needed. Works offline.
+
+Want cloud features later? `npx @awareness.market/setup --cloud`
+
+### Option 2: Zero-Code Interceptor (Python/TypeScript SDK)
+
+**The fastest way to add memory to existing AI apps.** One line â€” zero code changes.
+
+#### Python â€” `AwarenessInterceptor.wrap_openai()` / `.wrap_anthropic()`
+
+```bash
+pip install awareness-memory-cloud
+```
+
+```python
+from openai import OpenAI
+from memory_cloud import AwarenessInterceptor
+
+client = OpenAI()
+
+# Local mode (no API key needed â€” data stays on your machine)
+interceptor = AwarenessInterceptor(mode="local")
+
+# Cloud mode (team collaboration, semantic search, multi-device sync)
+interceptor = AwarenessInterceptor(api_key="aw_...", memory_id="...")
+
+# One line â€” all conversations automatically remembered
+interceptor.wrap_openai(client)
+
+# Use OpenAI as normal â€” memory happens in the background
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Refactor the auth module"}]
+)
+```
+
+#### TypeScript â€” `AwarenessInterceptor.wrapOpenAI()` / `.wrapAnthropic()`
+
+```bash
+npm install @awareness-sdk/memory-cloud
+```
+
+```typescript
+import OpenAI from "openai";
+import { AwarenessInterceptor } from "@awareness-sdk/memory-cloud";
+
+const openai = new OpenAI();
+
+// Local mode (no API key needed â€” data stays on your machine)
+const interceptor = new AwarenessInterceptor({ mode: "local" });
+
+// Cloud mode (team collaboration, semantic search, multi-device sync)
+const interceptor = new AwarenessInterceptor({ apiKey: "aw_...", memoryId: "..." });
+
+// One line â€” all conversations automatically remembered
+interceptor.wrapOpenAI(openai);
+
+// Use as normal â€” memory happens in the background
+const response = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [{ role: "user", content: "What did we decide about the database?" }],
+});
+```
+
+### Option 3: IDE Plugins
+
+#### Claude Code
+
+```bash
+/plugin marketplace add everest-an/Awareness-SDK
+/plugin install awareness-memory@awareness
+```
+
+Skills: `/awareness-memory:session-start` Â· `/awareness-memory:recall` Â· `/awareness-memory:save` Â· `/awareness-memory:done`
+
+[Documentation](claudecode/README.md) Â· [Online docs](https://awareness.market/docs?doc=ide-plugins)
+
+#### OpenClaw
+
+```bash
+# Plugin (full integration):
+openclaw plugins install @awareness.market/openclaw-memory
+
+# Or Skill (via ClawHub):
+npx clawhub@latest install awareness-memory
+```
+
+Auto-recall on session start. Auto-capture on session end. Zero configuration.
+
+[Documentation](openclaw/README.md) Â· [npm](https://www.npmjs.com/package/@awareness.market/openclaw-memory)
+
+#### OpenCode
+
+```json
+// opencode.json â€” auto-capture sessions + awareness tools (no MCP config needed)
+{
+  "plugin": [
+    ["@awareness.market/opencode-plugin", {
+      "apiKey": "aw_...",
+      "memoryId": "your-memory-id",
+      "agentRole": "builder_agent"
+    }]
+  ]
+}
+```
+
+Auto-captures each session into Awareness. Registers `awareness_init` / `recall` / `record` / `lookup` as native tools.
+
+[Documentation](opencode/README.md) Â· [npm](https://www.npmjs.com/package/@awareness.market/opencode-plugin)
+
+---
+
+## Features
+
+| Feature | Local | + Cloud |
+|---------|-------|---------|
+| Persistent memory across sessions | âœ… | âœ… |
+| 13+ IDE support (Claude Code, Cursor, Windsurf...) | âœ… | âœ… |
+| Zero-code interceptor (`wrap_openai` / `wrap_anthropic`) | â€” | âœ… |
+| Knowledge card extraction (decisions, solutions, risks) | âœ… | âœ… + LLM |
+| Workflow rules injection (agent auto-recalls) | âœ… | âœ… |
+| Full-text + semantic search | âœ… | âœ… |
+| Progressive disclosure (summary â†’ full) | âœ… | âœ… |
+| Cross-device sync | Git | Real-time |
+| Semantic vector search (100+ languages) | â€” | âœ… |
+| Multi-agent collaboration | âœ… | âœ… |
+| Memory marketplace | â€” | âœ… |
+| Team collaboration | â€” | âœ… |
+
+### Local-First Architecture
+
+```
+Your machine                          Cloud (optional)
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  .awareness/        â”‚   sync â†’     â”‚  Awareness Cloud â”‚
+â”‚  â”œâ”€â”€ memories/*.md  â”‚   â† sync    â”‚  (semantic searchâ”‚
+â”‚  â”œâ”€â”€ knowledge/     â”‚              â”‚   team sync,     â”‚
+â”‚  â””â”€â”€ index.db       â”‚              â”‚   marketplace)   â”‚
+â”‚                     â”‚              â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+â”‚  Daemon :37800      â”‚
+â”‚  â”œâ”€â”€ FTS5 search    â”‚
+â”‚  â”œâ”€â”€ MCP server     â”‚
+â”‚  â””â”€â”€ Web dashboard  â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+- **Data stays on your machine** by default
+- **Works offline** â€” no internet required
+- **Markdown files** â€” human-readable, git-friendly, portable
+- **Cloud is optional** â€” one click to enable sync, semantic search, team features
+
+---
+
+## Packages
+
+| Package | Description | Install |
+|---------|-------------|---------|
+| [`@awareness.market/local`](https://www.npmjs.com/package/@awareness.market/local) | Local daemon + MCP server | `npx @awareness.market/local start` |
+| [`@awareness.market/setup`](https://www.npmjs.com/package/@awareness.market/setup) | CLI setup for all 13+ IDEs | `npx @awareness.market/setup` |
+| [`awareness-memory-cloud`](https://pypi.org/project/awareness-memory-cloud/) | Python SDK with interceptors | `pip install awareness-memory-cloud` |
+| [`@awareness-sdk/memory-cloud`](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) | TypeScript SDK with interceptors | `npm i @awareness-sdk/memory-cloud` |
+| [`@awareness.market/openclaw-memory`](https://www.npmjs.com/package/@awareness.market/openclaw-memory) | OpenClaw plugin | `openclaw plugins install @awareness.market/openclaw-memory` |
+| [`@awareness.market/opencode-plugin`](https://www.npmjs.com/package/@awareness.market/opencode-plugin) | OpenCode plugin | `"plugin": ["@awareness.market/opencode-plugin"]` in `opencode.json` |
+| [`claudecode/`](claudecode/README.md) | Claude Code plugin | `/plugin marketplace add everest-an/Awareness-SDK` then `/plugin install awareness-memory@awareness` |
+
+---
+
+## Integrations
+
+Works with any AI framework:
+
+- **LangChain** â€” [Integration guide](https://awareness.market/docs?doc=langchain)
+- **CrewAI** â€” [Integration guide](https://awareness.market/docs?doc=crewai)
+- **AutoGen** â€” [Integration guide](https://awareness.market/docs?doc=autogen)
+- **PraisonAI** â€” [Integration guide](https://awareness.market/docs?doc=praisonai)
+- **Custom agents** â€” MCP protocol or REST API
+
+---
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AWARENESS_MCP_URL` | MCP endpoint | `http://localhost:37800/mcp` |
+| `AWARENESS_API_KEY` | Cloud API key (`aw_...`) | â€” (local mode: not needed) |
+| `AWARENESS_MEMORY_ID` | Cloud memory ID | â€” (local mode: auto) |
+| `AWARENESS_AGENT_ROLE` | Agent role filter | `builder_agent` |
+
+---
+
+## Contributing
+
+Contributions welcome! Please open an issue or pull request.
+
+## License
+
+Apache 2.0
+
+
+---
+
+## llms.txt
+
+# Awareness SDK
+
+> Local-first persistent memory for AI coding agents. Open source (Apache-2.0), works offline, no account. Native plugins + MCP for OpenCode, Claude Code, Cursor, Windsurf, OpenClaw; Python & TypeScript SDKs. LongMemEval R@5 96.0%.
+
+Awareness gives coding agents cross-session memory: it stores decisions, fixes, workflows and preferences as structured knowledge cards, and recalls the relevant few on demand â€” keeping the active context window small and stable instead of letting it grow until the session stalls.
+
+## What it is
+- [README](https://github.com/everest-an/Awareness-SDK/blob/main/README.md): overview, quick start, packages, integrations, FAQ
+- [Local daemon](https://github.com/everest-an/Awareness-Market): the actual retrieval pipeline â€” Markdown storage + SQLite FTS5/hybrid search, MCP server, web dashboard
+- [Docs](https://awareness.market/docs): guides and concepts
+- [Site](https://awareness.market): landing page + cloud (optional)
+
+## Why it is different
+- Local-first and offline: memory is plain Markdown in `.awareness/` â€” human-readable, git-friendly, no account.
+- Retrieval with zero LLM calls: hybrid BM25 + vector + knowledge-graph, fused with RRF.
+- Benchmarked: 96.0% Recall@5 on LongMemEval through the real daemon pipeline â€” reproducible via [`benchmarks/longmemeval/run_f053_daemon_path.mjs`](https://github.com/everest-an/Awareness-Market/blob/main/benchmarks/longmemeval/run_f053_daemon_path.mjs)
+- Progressive disclosure: `summary` first, `full` only for the items that matter â€” no context blow-up.
+
+## Integrations (native plugins + MCP)
+- [OpenCode plugin](https://github.com/everest-an/Awareness-SDK/tree/main/opencode): `@awareness.market/opencode-plugin` â€” registers `awareness_init / recall / record / lookup` as native tools; structured handoff at compaction
+- [Claude Code](https://github.com/everest-an/Awareness-SDK/tree/main/claudecode): skills + hooks
+- [OpenClaw](https://github.com/everest-an/Awareness-SDK/tree/main/openclaw): native plugin
+- [Setup CLI](https://github.com/everest-an/Awareness-SDK/tree/main/setup-cli): `npx @awareness.market/setup` â€” auto-detects 13+ IDEs and writes MCP config + workflow rules
+
+## Packages
+- `@awareness.market/local` â€” local daemon + MCP server
+- `@awareness.market/opencode-plugin` â€” OpenCode plugin
+- `@awareness.market/setup` â€” one-command setup for 13+ IDEs
+- `awareness-memory-cloud` (PyPI) Â· `@awareness-sdk/memory-cloud` (npm) â€” zero-code interceptors (`wrap_openai` / `wrapOpenAI`)
+
+## Tool surface (MCP)
+`awareness_init` Â· `awareness_recall` Â· `awareness_record` Â· `awareness_lookup` Â· `awareness_apply_skill` Â· `awareness_mark_skill_used` Â· `awareness_get_agent_prompt` Â· `awareness_facts` Â· `awareness_related` Â· `awareness_timeline`
+
+## Citation
+> Awareness (2026). Local-first persistent memory for AI coding agents. everest-an. https://github.com/everest-an/Awareness-SDK
+
+## Optional
+- [License](https://github.com/everest-an/Awareness-SDK/blob/main/LICENSE): Apache-2.0
