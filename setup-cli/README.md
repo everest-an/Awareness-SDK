@@ -1,6 +1,6 @@
 # @awareness.market/setup
 
-[![npm](https://img.shields.io/npm/v/@awareness.market/setup?color=22c55e)](https://www.npmjs.com/package/@awareness.market/setup) [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/nMDrT538Qa)
+[![npm](https://img.shields.io/npm/v/@awareness.market/setup?color=22c55e)](https://www.npmjs.com/package/@awareness.market/setup) [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/BMjkCKeqnJ)
 
 **One command to give your AI agent persistent memory. 13+ IDEs supported.**
 

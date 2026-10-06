@@ -1,6 +1,6 @@
 # Awareness Memory SDK — Python
 
-[![PyPI](https://img.shields.io/pypi/v/awareness-memory-cloud?color=00d4ff)](https://pypi.org/project/awareness-memory-cloud/) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/nMDrT538Qa)
+[![PyPI](https://img.shields.io/pypi/v/awareness-memory-cloud?color=00d4ff)](https://pypi.org/project/awareness-memory-cloud/) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/BMjkCKeqnJ)
 
 Python SDK for adding persistent memory to AI agents and apps. **96.0% Recall@5 on [LongMemEval](https://arxiv.org/abs/2410.10813) (ICLR 2025)**.
 

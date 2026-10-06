@@ -1,6 +1,6 @@
 # Awareness Memory SDK — TypeScript
 
-[![npm](https://img.shields.io/npm/v/@awareness-sdk/memory-cloud?color=7b68ee)](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/nMDrT538Qa)
+[![npm](https://img.shields.io/npm/v/@awareness-sdk/memory-cloud?color=7b68ee)](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/BMjkCKeqnJ)
 
 TypeScript SDK for adding persistent memory to AI agents and apps. **96.0% Recall@5 on [LongMemEval](https://arxiv.org/abs/2410.10813) (ICLR 2025)**.
 
