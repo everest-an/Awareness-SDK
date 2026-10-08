@@ -52,10 +52,16 @@ const ALLOWED_PROPERTY_KEYS = new Set([
 ]);
 
 export class Telemetry {
-  constructor({ config, projectDir, version = 'unknown' } = {}) {
+  constructor({ config, projectDir, version = 'unknown', remote } = {}) {
     const telCfg = config?.telemetry || {};
     // Default-on: only disabled when user explicitly sets enabled=false.
     this.enabled = telCfg.enabled !== false;
+    // Remote shipping. enabled=true still records events in-memory (so the
+    // Privacy Settings page can show them), but network sends can be turned
+    // off independently. Tests MUST pass remote:false — otherwise a unit run
+    // posts its fixture events to the production analytics endpoint (this
+    // actually happened: 242 `awareness_not_real` rows from a test fixture).
+    this.remote = remote !== false && telCfg.remote !== false;
     this.endpoint = telCfg.endpoint || process.env.AWARENESS_TELEMETRY_ENDPOINT || DEFAULT_ENDPOINT;
     this.version = version;
     this.projectDir = projectDir;
@@ -142,6 +148,8 @@ export class Telemetry {
 
   async flush() {
     if (!this.enabled || this.queue.length === 0) return;
+    // remote=false (tests): keep the events in memory and never touch the network.
+    if (!this.remote) return;
     const batch = this.queue.splice(0);
     this._persistQueue();
     try {
@@ -169,6 +177,7 @@ export class Telemetry {
   async deleteLocal() {
     this.queue = [];
     this._persistQueue();
+    if (!this.remote) return;
     try {
       const url = this.endpoint.replace(/\/$/, '') + '/telemetry/forget';
       await fetch(url, {
