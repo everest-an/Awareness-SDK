@@ -153,6 +153,14 @@ export async function handleApiRoute(daemon, req, res, url) {
     return apiCloudAuthOpenBrowser(daemon, req, res);
   }
 
+  // F-040 Phase B "server half": the welcome-step email opt-in forwards to the
+  // cloud. Client half + privacy tests: web/onboarding/steps.js,
+  // test/onboarding-email-optin.test.mjs. Restores the L1 endpoint contract
+  // (scripts/verify-endpoints.mjs) that went red when the client call landed alone.
+  if (route === '/subscribe' && req.method === 'POST') {
+    return apiSubscribe(daemon, req, res);
+  }
+
   if (route.startsWith('/cloud/memories') && req.method === 'GET') {
     return apiCloudListMemories(daemon, req, res, url);
   }
@@ -1175,6 +1183,44 @@ export async function apiCloudAuthPoll(daemon, req, res) {
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
   return jsonResponse(res, { error: 'Auth timeout', status: 'pending' }, 408);
+}
+
+/**
+ * POST /api/v1/subscribe — forward the welcome-step email opt-in to the cloud
+ * ("server half" of F-040 Phase B; client half: web/onboarding/steps.js).
+ *
+ * The cloud endpoint (backend/awareness/api/routes/subscribe.py) is public and
+ * rate-limited. We forward `{email, source}` only — never an installation_id —
+ * so a volunteer's address stays unlinked from their anonymous usage history
+ * (privacy contract pinned by test/onboarding-email-optin.test.mjs and the
+ * tests for this handler). Cloud failure returns a soft 502 and never throws:
+ * the onboarding UI already ignores errors from this call.
+ */
+export async function apiSubscribe(daemon, req, res) {
+  let body = {};
+  try {
+    const raw = await readBody(req);
+    if (raw) body = JSON.parse(raw);
+  } catch {
+    return jsonResponse(res, { error: 'invalid_json' }, 400);
+  }
+
+  const email = typeof body.email === 'string' ? body.email.trim() : '';
+  if (!email) {
+    return jsonResponse(res, { error: 'email_required' }, 400);
+  }
+  const source = typeof body.source === 'string' && body.source.trim()
+    ? body.source.trim()
+    : 'daemon-onboarding';
+
+  const config = daemon._loadConfig();
+  const apiBase = config?.cloud?.api_base || 'https://awareness.market/api/v1';
+  try {
+    const data = await daemon._httpJson('POST', `${apiBase}/subscribe`, { email, source });
+    return jsonResponse(res, data ?? { status: 'ok' });
+  } catch (err) {
+    return jsonResponse(res, { error: 'subscribe_unreachable', detail: err.message }, 502);
+  }
 }
 
 export async function apiCloudListMemories(daemon, _req, res, url) {
