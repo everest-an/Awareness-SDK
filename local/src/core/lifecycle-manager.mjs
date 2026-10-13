@@ -72,6 +72,7 @@ export async function runLifecycleChecks(indexer, content, title, insights, opti
     mitigated_risks: [],
     archived: 0,
     deduped: 0,
+    reclaimed: 0,
   };
 
   if (!indexer?.db) return result;
@@ -79,6 +80,26 @@ export async function runLifecycleChecks(indexer, content, title, insights, opti
   try {
     // 1. Garbage collection: clean up noise tasks and stale items (sync, fast)
     result.archived = _garbageCollect(indexer);
+
+    // 1b. Lease reclaim (OPT-IN). A worker that claims a task then dies leaves it
+    //     stranded in 'claimed'/'doing' forever. When AWARENESS_CLAIM_TTL_MINUTES > 0
+    //     such a task is returned to 'open' so the next worker can pick it up.
+    //     Default 0 = disabled, so stock behaviour is byte-unchanged. This is the
+    //     recovery half of the atomic claim CAS (daemon.mjs `_updateTask`,
+    //     `expect_status`). See docs/strategy/MULTI_AGENT_TASK_LEDGER.md.
+    const claimTtlMin = Number(process.env.AWARENESS_CLAIM_TTL_MINUTES || 0);
+    if (Number.isFinite(claimTtlMin) && claimTtlMin > 0) {
+      try {
+        const claimCutoff = new Date(Date.now() - claimTtlMin * 60_000).toISOString();
+        const reclaimed = indexer.db
+          .prepare(
+            `UPDATE tasks SET status = 'open', agent_role = NULL, updated_at = ?
+             WHERE status IN ('claimed', 'doing') AND updated_at < ?`
+          )
+          .run(new Date().toISOString(), claimCutoff);
+        result.reclaimed = reclaimed.changes;
+      } catch { /* non-fatal — reclaim is best-effort */ }
+    }
 
     // 2. Embed content once, reuse for both tasks and risks (async, ~10ms)
     let contentVector = null;

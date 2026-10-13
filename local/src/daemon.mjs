@@ -720,6 +720,34 @@ export class AwarenessLocalDaemon {
   static MAX_CONTENT_BYTES = 1024 * 1024;
   /** Write a single memory, index it, and trigger knowledge extraction. */
   async _remember(params) {
+    // Agent budget (OPT-IN): cap records per agent_role per rolling hour.
+    // AWARENESS_AGENT_RECORD_LIMIT_PER_HOUR=0 (default) disables the check, so stock
+    // behaviour is byte-unchanged. A multi-agent fleet sets it so one runaway worker
+    // cannot flood the shared ledger. Pairs with the task ledger + atomic claim.
+    // See docs/strategy/MULTI_AGENT_TASK_LEDGER.md.
+    const limit = Number(process.env.AWARENESS_AGENT_RECORD_LIMIT_PER_HOUR || 0);
+    if (Number.isFinite(limit) && limit > 0) {
+      const role = params.agent_role || 'builder_agent';
+      try {
+        const since = new Date(Date.now() - 3_600_000).toISOString();
+        const used =
+          this.indexer.db
+            .prepare('SELECT COUNT(*) AS c FROM memories WHERE agent_role = ? AND created_at >= ?')
+            .get(role, since)?.c ?? 0;
+        if (used >= limit) {
+          return {
+            error: 'budget_exceeded',
+            agent_role: role,
+            limit,
+            window: '1h',
+            used,
+            hint: 'Raise AWARENESS_AGENT_RECORD_LIMIT_PER_HOUR, or wait for the window to roll.',
+          };
+        }
+      } catch {
+        // Budget check is best-effort — never block a write on it.
+      }
+    }
     return rememberEngine(this, params);
   }
 
@@ -787,7 +815,19 @@ export class AwarenessLocalDaemon {
     };
   }
 
-  /** Update a task's status. */
+  /**
+   * Update a task's status.
+   *
+   * When `expect_status` is supplied the transition is an ATOMIC compare-and-swap:
+   * the row is only modified if it still holds `expect_status`, and `changes === 0`
+   * means another agent won the race (returned as `status: "conflict"`). This is the
+   * primitive multi-agent claiming needs — e.g. a worker claims an `open` task with
+   * `{ task_id, status: "claimed", expect_status: "open", agent_role }`, and exactly
+   * one of N concurrent workers succeeds.
+   *
+   * Without `expect_status` the original unconditional semantics are preserved
+   * (kept on the `indexTask` path so FTS + task embeddings stay in sync).
+   */
   async _updateTask(params) {
     if (!params.task_id) {
       return { error: 'task_id is required for update_task' };
@@ -801,16 +841,62 @@ export class AwarenessLocalDaemon {
       return { error: `Task not found: ${params.task_id}` };
     }
 
+    const nextStatus = params.status || task.status;
+    const nextRole = params.agent_role || task.agent_role || null;
+    const expect = params.expect_status;
+
+    // Atomic CAS path — used for claims. No await between read and write, and the
+    // write itself is guarded by `AND status = ?`, so concurrent claims are safe.
+    if (expect) {
+      const res = this.indexer.db
+        .prepare(
+          `UPDATE tasks SET status = ?, agent_role = ?, updated_at = ?
+           WHERE id = ? AND status = ?`
+        )
+        .run(nextStatus, nextRole, nowISO(), params.task_id, expect);
+
+      if (res.changes === 0) {
+        const cur = this.indexer.db
+          .prepare('SELECT status, agent_role FROM tasks WHERE id = ?')
+          .get(params.task_id);
+        return {
+          status: 'conflict',
+          task_id: params.task_id,
+          expected_status: expect,
+          current_status: cur?.status ?? null,
+          current_agent_role: cur?.agent_role ?? null,
+          claimed: false,
+          mode: 'local',
+        };
+      }
+
+      // A closed task no longer needs a cached embedding (mirrors indexTask).
+      if (nextStatus !== 'open') {
+        try { this.indexer.db.prepare('DELETE FROM task_embeddings WHERE task_id = ?').run(params.task_id); } catch {}
+      }
+
+      return {
+        status: 'ok',
+        task_id: params.task_id,
+        new_status: nextStatus,
+        agent_role: nextRole,
+        claimed: true,
+        mode: 'local',
+      };
+    }
+
+    // Backward-compatible unconditional path.
     this.indexer.indexTask({
       ...task,
-      status: params.status || task.status,
+      status: nextStatus,
+      agent_role: nextRole,
       updated_at: nowISO(),
     });
 
     return {
       status: 'ok',
       task_id: params.task_id,
-      new_status: params.status || task.status,
+      new_status: nextStatus,
       mode: 'local',
     };
   }

@@ -1,4 +1,4 @@
-# @awareness.market/setup
+﻿# @awareness.market/setup
 
 [![npm](https://img.shields.io/npm/v/@awareness.market/setup?color=22c55e)](https://www.npmjs.com/package/@awareness.market/setup) [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/BMjkCKeqnJ)
 
@@ -128,7 +128,7 @@ Connects your IDE to the memory daemon:
 | Package | Description |
 |---------|-------------|
 | [`@awareness.market/local`](https://www.npmjs.com/package/@awareness.market/local) | Local daemon that this CLI starts |
-| [`@awareness-sdk/memory-cloud`](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) | TypeScript SDK with interceptors |
+| [`@awareness.market/memory-cloud`](https://www.npmjs.com/package/@awareness.market/memory-cloud) | TypeScript SDK with interceptors |
 | [`awareness-memory-cloud`](https://pypi.org/project/awareness-memory-cloud/) | Python SDK with interceptors |
 | [`@awareness.market/openclaw-memory`](https://www.npmjs.com/package/@awareness.market/openclaw-memory) | OpenClaw plugin |
 

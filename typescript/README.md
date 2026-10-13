@@ -1,6 +1,6 @@
-# Awareness Memory SDK — TypeScript
+﻿# Awareness Memory SDK — TypeScript
 
-[![npm](https://img.shields.io/npm/v/@awareness-sdk/memory-cloud?color=7b68ee)](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/BMjkCKeqnJ)
+[![npm](https://img.shields.io/npm/v/@awareness.market/memory-cloud?color=7b68ee)](https://www.npmjs.com/package/@awareness.market/memory-cloud) [![LongMemEval R@5](https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen)](https://arxiv.org/abs/2410.10813) [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/BMjkCKeqnJ)
 
 TypeScript SDK for adding persistent memory to AI agents and apps. **96.0% Recall@5 on [LongMemEval](https://arxiv.org/abs/2410.10813) (ICLR 2025)**.
 
@@ -98,7 +98,7 @@ Online docs: <https://awareness.market/docs?doc=typescript>
 ## Install
 
 ```bash
-npm install @awareness-sdk/memory-cloud
+npm install @awareness.market/memory-cloud
 ```
 
 ---
@@ -111,7 +111,7 @@ npm install @awareness-sdk/memory-cloud
 
 ```typescript
 import OpenAI from "openai";
-import { MemoryCloudClient, AwarenessInterceptor } from "@awareness-sdk/memory-cloud";
+import { MemoryCloudClient, AwarenessInterceptor } from "@awareness.market/memory-cloud";
 
 const client = new MemoryCloudClient({ mode: "local" }); // data stays on your machine
 const interceptor = await AwarenessInterceptor.create({ client, memoryId: "my-project" });
@@ -130,7 +130,7 @@ const response = await openai.chat.completions.create({
 ```typescript
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { MemoryCloudClient, AwarenessInterceptor } from "@awareness-sdk/memory-cloud";
+import { MemoryCloudClient, AwarenessInterceptor } from "@awareness.market/memory-cloud";
 
 const client = new MemoryCloudClient({ apiKey: "aw_..." });
 const interceptor = await AwarenessInterceptor.create({ client, memoryId: "memory_123" });
@@ -151,7 +151,7 @@ interceptor.wrapAnthropic(anthropic);
 ### Local mode
 
 ```typescript
-import { MemoryCloudClient } from "@awareness-sdk/memory-cloud";
+import { MemoryCloudClient } from "@awareness.market/memory-cloud";
 
 const client = new MemoryCloudClient({ mode: "local" }); // connects to localhost:8765
 
@@ -163,7 +163,7 @@ console.log(result.results);
 ### Cloud mode
 
 ```typescript
-import { MemoryCloudClient } from "@awareness-sdk/memory-cloud";
+import { MemoryCloudClient } from "@awareness.market/memory-cloud";
 
 const client = new MemoryCloudClient({
   baseUrl: process.env.AWARENESS_API_BASE_URL || "https://awareness.market/api/v1",
@@ -281,7 +281,7 @@ if (result.perception) {
 ## Read Exported Packages
 
 ```typescript
-import { readExportPackage } from "@awareness-sdk/memory-cloud";
+import { readExportPackage } from "@awareness.market/memory-cloud";
 
 const parsed = await readExportPackage(zipBytes);
 console.log(parsed.manifest);

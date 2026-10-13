@@ -1,10 +1,10 @@
-<p align="center">
+﻿<p align="center">
   <img src="assets/hero-banner.svg" alt="Awareness — Long-Term Memory for AI Agents" width="100%"/>
 </p>
 
 <p align="center">
   <a href="https://pypi.org/project/awareness-memory-cloud/"><img src="https://img.shields.io/pypi/v/awareness-memory-cloud?color=00d4ff&label=PyPI" alt="PyPI"/></a>
-  <a href="https://www.npmjs.com/package/@awareness-sdk/memory-cloud"><img src="https://img.shields.io/npm/v/@awareness-sdk/memory-cloud?color=7b68ee&label=npm" alt="npm"/></a>
+  <a href="https://www.npmjs.com/package/@awareness.market/memory-cloud"><img src="https://img.shields.io/npm/v/@awareness.market/memory-cloud?color=7b68ee&label=npm" alt="npm"/></a>
   <a href="https://www.npmjs.com/package/@awareness.market/local"><img src="https://img.shields.io/npm/v/@awareness.market/local?color=22c55e&label=local" alt="local"/></a>
   <a href="https://awareness.market"><img src="https://img.shields.io/badge/Cloud-awareness.market-5ce0d2" alt="Cloud"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue" alt="License"/></a>
@@ -117,12 +117,12 @@ response = client.chat.completions.create(
 #### TypeScript — `AwarenessInterceptor.wrapOpenAI()` / `.wrapAnthropic()`
 
 ```bash
-npm install @awareness-sdk/memory-cloud
+npm install @awareness.market/memory-cloud
 ```
 
 ```typescript
 import OpenAI from "openai";
-import { AwarenessInterceptor } from "@awareness-sdk/memory-cloud";
+import { AwarenessInterceptor } from "@awareness.market/memory-cloud";
 
 const openai = new OpenAI();
 
@@ -238,7 +238,7 @@ Your machine                          Cloud (optional)
 | [`@awareness.market/local`](https://www.npmjs.com/package/@awareness.market/local) | Local daemon + MCP server | `npx @awareness.market/local start` |
 | [`@awareness.market/setup`](https://www.npmjs.com/package/@awareness.market/setup) | CLI setup for all 13+ IDEs | `npx @awareness.market/setup` |
 | [`awareness-memory-cloud`](https://pypi.org/project/awareness-memory-cloud/) | Python SDK with interceptors | `pip install awareness-memory-cloud` |
-| [`@awareness-sdk/memory-cloud`](https://www.npmjs.com/package/@awareness-sdk/memory-cloud) | TypeScript SDK with interceptors | `npm i @awareness-sdk/memory-cloud` |
+| [`@awareness.market/memory-cloud`](https://www.npmjs.com/package/@awareness.market/memory-cloud) | TypeScript SDK with interceptors | `npm i @awareness.market/memory-cloud` |
 | [`@awareness.market/openclaw-memory`](https://www.npmjs.com/package/@awareness.market/openclaw-memory) | OpenClaw plugin | `openclaw plugins install @awareness.market/openclaw-memory` |
 | [`@awareness.market/opencode-plugin`](https://www.npmjs.com/package/@awareness.market/opencode-plugin) | OpenCode plugin | `"plugin": ["@awareness.market/opencode-plugin"]` in `opencode.json` |
 | [`claudecode/`](claudecode/README.md) | Claude Code plugin | `/plugin marketplace add everest-an/Awareness-SDK` then `/plugin install awareness-memory@awareness` |

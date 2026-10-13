@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.13.0] - 2026-10-13
+
+### Added — task ledger primitives for multi-agent fleets
+
+Three opt-in primitives that turn the task store into a coordination ledger for
+many agents sharing one daemon. **All three default to off**, so existing
+behaviour is byte-unchanged until you set the environment variable.
+
+- **Atomic claim (CAS).** `awareness_record({ task_id, status: "claimed",
+  expect_status: "open", agent_role })` only applies if the row still holds
+  `expect_status`. On a race it returns
+  `{ status: "conflict", current_status, current_agent_role }` instead of
+  overwriting. Verified with 8 concurrent claims → exactly one winner.
+  (`daemon.mjs` `_updateTask`.)
+
+- **Lease / TTL reclaim.** With `AWARENESS_CLAIM_TTL_MINUTES > 0`, a task left in
+  `claimed` / `doing` past the TTL is returned to `open`, so a worker that dies
+  does not strand its work forever. (`core/lifecycle-manager.mjs`.)
+
+- **Agent budget.** With `AWARENESS_AGENT_RECORD_LIMIT_PER_HOUR > 0`, records are
+  capped per `agent_role` per rolling hour; the over-limit call returns
+  `{ error: "budget_exceeded", agent_role, limit, window: "1h", used }`. Keeps one
+  runaway worker from flooding the shared ledger. (`daemon.mjs` `_remember`.)
+
+Task lookup already supports `status` / `priority` / `agent_role` filters, so
+workers can see `claimed` / `doing` work, not just `open`.
+
+No schema migration, no new dependency, pure JS — identical on macOS, Windows and
+Linux. Full test suite: 1537 pass / 0 fail.
+
+See `docs/strategy/MULTI_AGENT_TASK_LEDGER.md` for the ledger schema and the
+orchestrator → N-workers workflow.
+
 ## [0.12.5] - 2026-08-28
 
 ### Fixed - the README example did not work
