@@ -21,6 +21,8 @@
   <a href="https://arxiv.org/abs/2410.10813"><img src="https://img.shields.io/badge/LongMemEval_R%405-96.0%25-brightgreen" alt="LongMemEval R@5 96.0%"/></a>
   <a href="https://awareness.market/sdk-docs/LONGMEMEVAL.md"><img src="https://img.shields.io/badge/benchmark-daemon_path_reproducible-blue" alt="Reproducible daemon-path benchmark"/></a>
   <a href="https://awareness.market/sdk-docs/ALTERNATIVES.md"><img src="https://img.shields.io/badge/vs_Mem0%2C_Zep%2C_MemPalace-factual_comparison-orange" alt="Factual comparison vs alternatives"/></a>
+  <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=market.awareness%2Fawareness"><img src="https://img.shields.io/badge/MCP%20Registry-market.awareness%2Fawareness-5ce0d2" alt="Official MCP Registry"/></a>
+  <a href="https://brick.blue/agent/92b7c38ba94c5642"><img src="https://brick.blue/api/v1/agents/92b7c38ba94c5642/badge.svg" alt="measured by brick.blue"/></a>
 </p>
 
 
