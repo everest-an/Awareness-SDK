@@ -21,7 +21,7 @@ _DEFAULT_EXTRACTION_MAX_TOKENS = 16384
 
 # Cloud REST default — public Awareness Cloud, NEVER a local dev server.
 DEFAULT_CLOUD_BASE_URL = "https://awareness.market/api/v1"
-# Local daemon root — `@awareness-sdk/local` (single-tenant) listens here.
+# Local daemon root — `@awareness.market/local` (single-tenant) listens here.
 DEFAULT_LOCAL_DAEMON_URL = "http://localhost:37800"
 
 # The four MCP tools the local daemon exposes via JSON-RPC at /mcp.
@@ -92,7 +92,7 @@ class MemoryCloudClient:
         mode: str = "cloud",          # "cloud" | "local" | "auto"
         # `mode="local"` routes the four daemon-supported tools (awareness_init,
         # awareness_recall, awareness_record, awareness_lookup) through the local
-        # `@awareness-sdk/local` daemon at port 37800 via MCP JSON-RPC. Cloud-only
+        # `@awareness.market/local` daemon at port 37800 via MCP JSON-RPC. Cloud-only
         # endpoints (createMemory, listMemories, …) raise LOCAL_NOT_SUPPORTED.
         # `mode="cloud"` (default) talks REST to the public Awareness Cloud.
         # `mode="auto"` probes the daemon first and falls back to cloud.
@@ -156,7 +156,7 @@ class MemoryCloudClient:
                 "LOCAL_NOT_SUPPORTED",
                 f"{method}() requires cloud mode — the local daemon does not implement "
                 f"this endpoint. Use mode='cloud'/'auto', or call the daemon directly via "
-                f"@awareness-sdk/local.",
+                f"@awareness.market/local.",
             )
 
     def call_local_daemon(self, tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:

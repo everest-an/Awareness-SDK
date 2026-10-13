@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.6.1] - 2026-10-13
+
+### Fixed - the local daemon was named after a package that no longer exists
+
+`client.py` referred users to `@awareness-sdk/local` in the module comment, the
+`mode="local"` docstring and — most visibly — the `LOCAL_NOT_SUPPORTED` error
+message. That name is a stale build (0.11.6, April) published under a scope this
+project does not control; the daemon ships as `@awareness.market/local`. Anyone
+who followed the error text installed the wrong, outdated package.
+
 ## [2.6.0] - 2026-04-19
 
 ### Added — F-059 skill fields + F-060 client-side HyDE
