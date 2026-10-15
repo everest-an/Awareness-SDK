@@ -230,7 +230,7 @@ export function getToolDefinitions() {
         'Save to memory. Pass whatever you have — the server infers what to do:\n' +
         '  · `content` (string or string[]) → save as a new memory; attach optional `insights` {knowledge_cards, action_items, risks, skills} inline to skip the extraction round-trip.\n' +
         '  · `items: [...]` → batch save multiple memories.\n' +
-        '  · `task_id` + `status` → update an existing task.\n' +
+        '  · `task_id` + `status` → update an existing task (add `expect_status` to claim it atomically).\n' +
         '  · `insights` alone → submit pre-extracted insights (no new memory).\n' +
         'Examples: awareness_record({ content: "Decided pgvector over Pinecone…", insights: {knowledge_cards: [...]} }); awareness_record({ task_id: "task_abc", status: "done" }).',
       inputSchema: {
@@ -250,9 +250,26 @@ export function getToolDefinitions() {
             description: 'Batch items: array of {content: "..."} objects. Used instead of a string `content` when recording multiple memories at once.',
           },
 
-          // Task-update surface
+          // Task-update surface. Supplying `expect_status` turns the update into
+          // an atomic compare-and-swap, which is how concurrent agents claim the
+          // same task without duplicating work. Omitting it keeps the update
+          // unconditional (the indexing path relies on that to keep FTS in sync).
           task_id: { type: 'string', description: 'Task ID (required for task updates).' },
-          status: { type: 'string', description: 'New task status (e.g. "done").' },
+          status: {
+            type: 'string',
+            description:
+              'New task status. Lifecycle: open -> claimed -> doing -> done | blocked | failed.',
+          },
+          expect_status: {
+            type: 'string',
+            description:
+              'Atomic compare-and-swap guard: the update only lands if the task still holds this status. ' +
+              'To claim work pass { task_id, status: "claimed", expect_status: "open", agent_role }. ' +
+              'Exactly one of N concurrent callers wins; losers get ' +
+              '{ status: "conflict", claimed: false, current_status, current_agent_role } and must pick ' +
+              'different work. Finish a claim with { task_id, status: "done"|"failed", expect_status: "doing" }. ' +
+              'Omit for an unconditional update.',
+          },
 
           // Metadata
           title: { type: 'string', description: 'Optional memory title (auto-generated if absent).' },

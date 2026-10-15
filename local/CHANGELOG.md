@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed - the atomic claim primitive was unreachable from MCP
+
+`expect_status` (the compare-and-swap added in 0.13.0) was implemented in the
+daemon and honoured by the tool bridge, but it was never declared in the
+`awareness_record` input schema. Agents only ever see the schema, so every claim
+took the unconditional path and two agents could both claim the same task - the
+exact race the primitive exists to prevent. The ledger doc still described the
+lease/budget/owner fields as unimplemented, which is how this went unnoticed.
+
+- Declared `expect_status` in the schema and documented the claim / release
+  shapes in its description, so agents can discover the CAS at call time.
+- Added `test/multi-agent-claim.test.mjs`: drives 8 concurrent claimers through
+  the real `callMcpTool` path and asserts exactly one winner, that losers are
+  told who holds the task, that guarded releases work, and that the unconditional
+  path still functions for the indexing route.
+
 ## [0.13.0] - 2026-10-13
 
 ### Added — task ledger primitives for multi-agent fleets

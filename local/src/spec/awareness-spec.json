@@ -195,7 +195,7 @@
     {
       "name": "awareness_record",
       "short_desc": "Save memory — pass ONE content string, daemon handles the rest",
-      "long_desc": "Save what you did/decided/learned to persistent memory. Pass a single content string and the daemon defaults action=remember and triggers client-side salience-aware extraction asynchronously. Example: awareness_record(content=\"Today I decided to switch from Pinecone to pgvector because...\"). Advanced actions (remember_batch, update_task, submit_insights) still require explicit action= for backwards compat."
+      "long_desc": "Save what you did/decided/learned to persistent memory. Pass a single content string and the daemon defaults action=remember and triggers client-side salience-aware extraction asynchronously. Example: awareness_record(content=\"Today I decided to switch from Pinecone to pgvector because...\"). Advanced actions (remember_batch, update_task, submit_insights) still require explicit action= for backwards compat. Multi-agent claiming: pass task_id + status + expect_status for an atomic compare-and-swap, e.g. {\"task_id\":\"task_abc\",\"status\":\"claimed\",\"expect_status\":\"open\",\"agent_role\":\"builder_agent\"}. Exactly one of N concurrent callers wins; the rest get {status:\"conflict\", claimed:false} and should take different work. Closing a claim: {\"task_id\":\"task_abc\",\"status\":\"done\",\"expect_status\":\"doing\"}."
     },
     {
       "name": "awareness_mark_skill_used",
