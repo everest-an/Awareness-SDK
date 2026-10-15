@@ -12,9 +12,9 @@
 </p>
 
 <p align="center">
-  <strong>Give your AI agent persistent memory across sessions.</strong><br/>
-  Local-first. Works offline. One command to set up. 13+ IDE support.<br/>
-  <a href="https://awareness.market/docs">Docs</a> · <a href="https://awareness.market">Cloud</a> · <a href="https://discord.com/invite/BMjkCKeqnJ">Discord</a> · <a href="#quick-start">Quick Start</a>
+  <strong>One brain. Every agent. Any IDE.</strong><br/>
+  Cursor's agent hands work to Claude Code's agent — shared memory, shared task board, no repeated work.<br/>
+  One command. No account. Local-first. 13+ IDEs.
 </p>
 
 <p align="center">
