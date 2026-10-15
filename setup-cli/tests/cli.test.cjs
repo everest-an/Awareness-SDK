@@ -189,6 +189,10 @@ test("resolveMcpConfigInputs prompts for missing MCP values in interactive mode"
     argv: ["--configure-mcp"],
     ideId: "copilot",
     isInteractive: true,
+    // Isolate from the developer's shell: without this the function reads a real
+    // AWARENESS_API_KEY from process.env, skips the prompts entirely, and echoes
+    // that live credential into the test output.
+    env: {},
     prompt: async (question) => {
       asked.push(question);
       return answers.shift() ?? "";
@@ -335,21 +339,46 @@ test("promptIdeSelection returns empty when no prompt function", async () => {
   assert.deepEqual(result, []);
 });
 
-// --- CLI multi-IDE flow tests ---
+  // --- CLI multi-IDE flow tests ---
 
-test("CLI configures multiple IDEs when using explicit --ide flags", async () => {
-  const cwd = makeTempDir();
-  fs.mkdirSync(path.join(cwd, ".cursor"));
-  fs.writeFileSync(path.join(cwd, "AGENTS.md"), "", "utf-8");
-  const originalCwd = process.cwd();
-  try {
-    process.chdir(cwd);
-    // Configure cursor first, then codex — avoids auto-detect including global openclaw
-    const exitCode1 = await cliModule.main(["--ide", "cursor", "--no-auth"]);
-    const exitCode2 = await cliModule.main(["--ide", "codex", "--no-auth"]);
+  /**
+   * Remove Awareness env vars that a developer shell may have exported.
+   * Returns the saved values so the caller can restore them.
+   */
+  function clearAwarenessEnv() {
+    const keys = ["AWARENESS_API_KEY", "AWARENESS_MEMORY_ID", "AWARENESS_MCP_URL"];
+    const saved = {};
+    for (const k of keys) {
+      if (k in process.env) {
+        saved[k] = process.env[k];
+        delete process.env[k];
+      }
+    }
+    return saved;
+  }
 
-    assert.equal(exitCode1, 0);
-    assert.equal(exitCode2, 0);
+  function restoreAwarenessEnv(saved) {
+    for (const [k, v] of Object.entries(saved)) process.env[k] = v;
+  }
+
+
+  test("CLI configures multiple IDEs when using explicit --ide flags", async () => {
+    const cwd = makeTempDir();
+    fs.mkdirSync(path.join(cwd, ".cursor"));
+    fs.writeFileSync(path.join(cwd, "AGENTS.md"), "", "utf-8");
+    const originalCwd = process.cwd();
+    // main() reads process.env, so a developer shell with AWARENESS_API_KEY (or
+    // MEMORY_ID) set takes the cloud path and exits non-zero. That is why this
+    // suite passed on CI and failed locally.
+    const savedEnv = clearAwarenessEnv();
+    try {
+      process.chdir(cwd);
+      // Configure cursor first, then codex — avoids auto-detect including global openclaw
+      const exitCode1 = await cliModule.main(["--ide", "cursor", "--no-auth"]);
+      const exitCode2 = await cliModule.main(["--ide", "codex", "--no-auth"]);
+
+      assert.equal(exitCode1, 0);
+      assert.equal(exitCode2, 0);
     // Cursor uses managed_file strategy, so .cursor/rules/awareness.mdc should exist
     assert.ok(fs.existsSync(path.join(cwd, ".cursor", "rules", "awareness.mdc")));
     // Codex uses AGENTS.md
@@ -357,6 +386,7 @@ test("CLI configures multiple IDEs when using explicit --ide flags", async () =>
     assert.match(agentsMd, /AWARENESS_RULES_START/);
   } finally {
     process.chdir(originalCwd);
+    restoreAwarenessEnv(savedEnv);
   }
 });
 

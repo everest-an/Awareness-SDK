@@ -435,7 +435,17 @@ export function syncIdeMcpConfig(options = {}) {
 
 function renderCore(spec, source) {
   const lines = Array.isArray(spec.core_lines) ? spec.core_lines : [];
-  return lines.map((line) => String(line).replaceAll("{source}", source)).join("\n").trim();
+  // The version travels through the template so the injected text cannot drift
+  // from spec.version. It used to be hardcoded in core_lines (as "3" against a
+  // spec.version of 4), which left every existing install permanently reported
+  // as "rules outdated" and trained users to ignore the warning.
+  const rulesVersion = String(spec.version ?? "");
+  return lines
+    .map((line) =>
+      String(line).replaceAll("{source}", source).replaceAll("{rules_version}", rulesVersion)
+    )
+    .join("\n")
+    .trim();
 }
 
 function cleanLines(rawLines) {
