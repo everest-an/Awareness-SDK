@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+### Changed - lease reclaim is now on by default (60 minutes)
+
+Lease reclaim shipped in 0.13.0 as opt-in (`AWARENESS_CLAIM_TTL_MINUTES > 0`),
+which meant the default experience was: a worker claims a task, dies, and the
+task sits in `claimed` forever. That is a *silent* loss - nothing reports that
+the work stopped moving, so nobody goes looking for it. The recovery half of the
+claim CAS was effectively absent.
+
+It now defaults to 60 minutes and `AWARENESS_CLAIM_TTL_MINUTES=0` turns it off.
+Sixty minutes is comfortably longer than a typical agent task and short enough to
+recover a dead worker within the hour.
+
+Renewal is the counterpart: a live worker extends its lease by repeating the
+guarded transition `{ task_id, status: "doing", expect_status: "doing" }`, since
+the CAS path always writes `updated_at`. This is documented in the
+`expect_status` schema description, because a lease nobody knows how to renew is
+the same trap as a parameter nobody knows exists.
+
+Safe to change now: the feature is days old and was off by default, so no
+existing setup relies on the previous behaviour.
+
 ### Fixed - the atomic claim primitive was unreachable from MCP
 
 `expect_status` (the compare-and-swap added in 0.13.0) was implemented in the

@@ -268,6 +268,11 @@ export function getToolDefinitions() {
               'Exactly one of N concurrent callers wins; losers get ' +
               '{ status: "conflict", claimed: false, current_status, current_agent_role } and must pick ' +
               'different work. Finish a claim with { task_id, status: "done"|"failed", expect_status: "doing" }. ' +
+              'RENEW: claims are leased for 60 minutes by default, and a task left in claimed/doing past the ' +
+              'lease returns to open so a dead worker cannot strand it. Long-running work must renew by ' +
+              'repeating { task_id, status: "doing", expect_status: "doing" } — that writes updated_at, which ' +
+              'is what extends the lease. If you expect to run longer than an hour without renewing, renew ' +
+              'periodically or another agent may legitimately take the task. ' +
               'Omit for an unconditional update.',
           },
 
