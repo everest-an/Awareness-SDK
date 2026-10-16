@@ -277,6 +277,16 @@ export function getToolDefinitions() {
           },
 
           // Metadata
+          verified_by: {
+            type: 'string',
+            description:
+              'Attest that a task\'s finished work was actually checked, by someone other than the agent that closed it. ' +
+              'Pass the verifier identity, e.g. { task_id: "task_abc", verified_by: "reviewer_agent" }. ' +
+              'Sets verified_by/verified_at; does not change the task status. ' +
+              'Only the first verifier wins — a second gets { status: "conflict", reason: "already_verified", verified_by }. ' +
+              'Tasks where verified_by is still null are the unverified deliveries: query them with ' +
+              'awareness_lookup({ type: "tasks", status: "done" }) and check the field.',
+          },
           title: { type: 'string', description: 'Optional memory title (auto-generated if absent).' },
           session_id: { type: 'string' },
           agent_role: { type: 'string' },

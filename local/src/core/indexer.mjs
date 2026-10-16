@@ -443,7 +443,8 @@ export class Indexer {
     // F-038: Add graph-first schema (nodes + edges)
     this._migrateGraphSchema();
     // F-038 T-005.5: Add recall_count to knowledge_cards
-    this._migrateRecallCount();
+        this._migrateRecallCount();
+        this._migrateTaskVerification();
     this._migrateGraphNodesSyncHash();
     // Add novelty_score + salience_reason for HIGH_SALIENCE quality gating
     this._migrateNoveltyScore();
@@ -649,10 +650,33 @@ export class Indexer {
     }
   }
 
-  /**
-   * Add novelty_score and salience_reason columns for HIGH_SALIENCE quality gating.
-   * These fields are extracted by client LLMs and used for dedup/quality filtering.
-   */
+      /**
+       * Add verification columns so a finished task can be attested by someone
+       * other than the agent that closed it.
+       *
+       * Without this, `done` is a self-declaration: an agent marks its own work
+       * complete and the board accumulates "finished" items nobody checked.
+       * A second agent (or a human) sets verified_by; tasks where it stays NULL
+       * are exactly the unverified deliveries, which makes them queryable.
+       */
+      _migrateTaskVerification() {
+        const migrations = [
+          'ALTER TABLE tasks ADD COLUMN verified_by TEXT',
+          'ALTER TABLE tasks ADD COLUMN verified_at TEXT',
+        ];
+        for (const sql of migrations) {
+          try {
+            this.db.exec(sql);
+          } catch {
+            // Column already exists - expected on subsequent runs
+          }
+        }
+      }
+
+      /**
+       * Add novelty_score and salience_reason columns for HIGH_SALIENCE quality gating.
+       * These fields are extracted by client LLMs and used for dedup/quality filtering.
+       */
   _migrateNoveltyScore() {
     const migrations = [
       'ALTER TABLE knowledge_cards ADD COLUMN novelty_score REAL',

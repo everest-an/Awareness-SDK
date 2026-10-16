@@ -841,6 +841,41 @@ export class AwarenessLocalDaemon {
       return { error: `Task not found: ${params.task_id}` };
     }
 
+    // Attestation is a separate concern from the status machine: a reviewer marks
+    // an already-closed task as checked, which must not disturb the status CAS.
+    // `verified_by IS NULL` in the WHERE makes the second verifier a no-op race
+    // loser rather than letting two reviewers overwrite each other's attestation.
+    if (params.verified_by) {
+      const verified = this.indexer.db
+        .prepare(
+          `UPDATE tasks SET verified_by = ?, verified_at = ?
+           WHERE id = ? AND verified_by IS NULL`
+        )
+        .run(String(params.verified_by), nowISO(), params.task_id);
+
+      if (verified.changes === 0) {
+        const cur = this.indexer.db
+          .prepare('SELECT verified_by, verified_at FROM tasks WHERE id = ?')
+          .get(params.task_id);
+        return {
+          status: 'conflict',
+          task_id: params.task_id,
+          reason: 'already_verified',
+          verified_by: cur?.verified_by ?? null,
+          verified_at: cur?.verified_at ?? null,
+          mode: 'local',
+        };
+      }
+
+      return {
+        status: 'ok',
+        task_id: params.task_id,
+        verified_by: String(params.verified_by),
+        original_status: task.status,
+        mode: 'local',
+      };
+    }
+
     const nextStatus = params.status || task.status;
     const nextRole = params.agent_role || task.agent_role || null;
     const expect = params.expect_status;
