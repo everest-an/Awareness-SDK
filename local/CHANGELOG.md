@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.14.0] - 2026-10-16
 
 ### Changed - lease reclaim is now on by default (60 minutes)
 
