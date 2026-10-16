@@ -61,10 +61,71 @@ function checkDaemonHealth() {
   });
 }
 
-/**
- * Attempt to start the local daemon via `npx @awareness.market/local start`.
- * Returns true if spawn succeeded (does NOT wait for readiness).
- */
+  /**
+   * Capabilities the injected rules teach but that older daemons do not expose.
+   *
+   * Probing for these beats comparing version numbers: it reports what the
+   * running process can actually do. A daemon keeps serving the MCP contract it
+   * loaded at startup, so upgrading the package is not enough — the process has
+   * to be restarted, and until it is, agents silently fall back to the old
+   * behaviour (e.g. two agents both "claiming" the same task).
+   */
+  const REQUIRED_DAEMON_CAPABILITIES = [
+    {
+      tool: "awareness_record",
+      param: "expect_status",
+      label: "multi-agent task claiming (expect_status on awareness_record)",
+    },
+  ];
+
+  /** Ask the daemon what it can do. Returns the tool list, or null if unreachable. */
+  function probeDaemonTools() {
+    return new Promise((resolve) => {
+      const send = (body) => new Promise((res) => {
+        const payload = JSON.stringify(body);
+        const req = http.request(
+          LOCAL_MCP_URL,
+          {
+            method: "POST",
+            timeout: 2500,
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(payload),
+            },
+          },
+          (r) => {
+            let d = "";
+            r.on("data", (c) => { d += c; });
+            r.on("end", () => { try { res(JSON.parse(d)); } catch { res(null); } });
+          }
+        );
+        req.on("error", () => res(null));
+        req.on("timeout", () => { req.destroy(); res(null); });
+        req.write(payload);
+        req.end();
+      });
+
+      // A real client handshakes first; some transports reject tools/list otherwise.
+      send({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-03-26",
+          capabilities: {},
+          clientInfo: { name: "awareness-doctor", version: "1" },
+        },
+      })
+        .then(() => send({ jsonrpc: "2.0", id: 2, method: "tools/list" }))
+        .then((out) => resolve(out?.result?.tools ?? null))
+        .catch(() => resolve(null));
+    });
+  }
+
+  /**
+   * Attempt to start the local daemon via `npx @awareness.market/local start`.
+   * Returns true if spawn succeeded (does NOT wait for readiness).
+   */
 async function tryStartDaemon(embeddingLang = "en") {
   try {
     const { spawn } = await import("node:child_process");
@@ -229,8 +290,25 @@ async function doctorCommand() {
         }).on("error", () => resolve(""));
       });
       const stats = JSON.parse(data);
-      console.log(`  [OK] Local daemon running (port ${stats.port || LOCAL_DAEMON_PORT}, pid ${stats.pid || "?"})`);
+      console.log(`  [OK] Local daemon running (port ${stats.port || LOCAL_DAEMON_PORT}, pid ${stats.pid || "?"}, v${stats.version || "?"})`);
       console.log(`       ${stats.stats?.totalMemories || 0} memories, ${stats.stats?.totalKnowledge || 0} knowledge cards`);
+
+      // A daemon serves the MCP contract it loaded at startup, so upgrading the
+      // package changes nothing until the process restarts. Probe for what the
+      // injected rules teach rather than trusting a version number.
+      const tools = await probeDaemonTools();
+      if (tools) {
+        const missing = REQUIRED_DAEMON_CAPABILITIES.filter((cap) => {
+          const tool = tools.find((t) => t.name === cap.tool);
+          return !tool?.inputSchema?.properties?.[cap.param];
+        });
+        if (missing.length) {
+          console.log(`  [!!] Running daemon does NOT support: ${missing.map((m) => m.label).join("; ")}`);
+          console.log(`       Agents will silently fall back to the old behaviour.`);
+          console.log(`       Fix: npx @awareness.market/local stop && npx @awareness.market/local start`);
+          issues++;
+        }
+      }
     } catch {
       console.log(`  [OK] Local daemon running on port ${LOCAL_DAEMON_PORT}`);
     }
