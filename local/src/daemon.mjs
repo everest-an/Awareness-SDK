@@ -883,12 +883,19 @@ export class AwarenessLocalDaemon {
     // Atomic CAS path — used for claims. No await between read and write, and the
     // write itself is guarded by `AND status = ?`, so concurrent claims are safe.
     if (expect) {
+      // A handoff rides along with the transition so it only lands if this caller
+      // actually won the race — a loser must not attach context to work another
+      // agent holds. COALESCE keeps an existing handoff when none is supplied.
+      const handoffPayload = params.handoff
+        ? (typeof params.handoff === 'string' ? params.handoff : JSON.stringify(params.handoff))
+        : null;
       const res = this.indexer.db
         .prepare(
-          `UPDATE tasks SET status = ?, agent_role = ?, updated_at = ?
+          `UPDATE tasks SET status = ?, agent_role = ?, updated_at = ?,
+             handoff = COALESCE(?, handoff)
            WHERE id = ? AND status = ?`
         )
-        .run(nextStatus, nextRole, nowISO(), params.task_id, expect);
+        .run(nextStatus, nextRole, nowISO(), handoffPayload, params.task_id, expect);
 
       if (res.changes === 0) {
         const cur = this.indexer.db

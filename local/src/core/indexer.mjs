@@ -445,6 +445,7 @@ export class Indexer {
     // F-038 T-005.5: Add recall_count to knowledge_cards
         this._migrateRecallCount();
         this._migrateTaskVerification();
+        this._migrateTaskScope();
     this._migrateGraphNodesSyncHash();
     // Add novelty_score + salience_reason for HIGH_SALIENCE quality gating
     this._migrateNoveltyScore();
@@ -663,6 +664,34 @@ export class Indexer {
         const migrations = [
           'ALTER TABLE tasks ADD COLUMN verified_by TEXT',
           'ALTER TABLE tasks ADD COLUMN verified_at TEXT',
+        ];
+        for (const sql of migrations) {
+          try {
+            this.db.exec(sql);
+          } catch {
+            // Column already exists - expected on subsequent runs
+          }
+        }
+      }
+
+      /**
+       * Add handoff and visibility columns.
+       *
+       * handoff carries a structured context pack across a task handover
+       * (goal / files / decisions / open_questions) so the next agent inherits
+       * the reasoning instead of re-deriving it from raw memory.
+       *
+       * visibility implements the scope model from
+       * docs/strategy/memory-architecture-v2/02-unified-scope-model.md:
+       *   'shared'  - visible to every agent in this memory (DEFAULT = today's behaviour)
+       *   'private' - visible only to the agent that wrote it (agent_role match)
+       * Defaulting to 'shared' keeps existing installs byte-identical; private is
+       * opt-in per record.
+       */
+      _migrateTaskScope() {
+        const migrations = [
+          'ALTER TABLE tasks ADD COLUMN handoff TEXT',
+          "ALTER TABLE tasks ADD COLUMN visibility TEXT DEFAULT 'shared'",
         ];
         for (const sql of migrations) {
           try {

@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.15.0] - 2026-10-16
+
+### Added - structured handoff
+
+A task transition can now carry a context pack for whoever picks the work up
+next, so the reasoning travels with the task instead of being re-derived from
+raw memory:
+
+    awareness_record({ task_id, status: "open", expect_status: "doing",
+                       handoff: { goal, files, decisions, open_questions } })
+
+The shape reuses Context Pack v2 rather than inventing a new one. It is stored
+in the same atomic UPDATE as the status transition, so it lands only if the
+caller wins the claim race -- a losing racer cannot attach context to work
+another agent holds.
+
+### Added - visibility column (scope model)
+
+`tasks.visibility` implements the first axis of
+docs/strategy/memory-architecture-v2/02-unified-scope-model.md.
+
+Default is 'shared', which is byte-identical to today's behaviour, so no
+existing install changes. 'private' is opt-in per record. Enforcement on the
+recall path is deliberately NOT part of this change: a half-enforced ACL is
+worse than none, because it implies isolation that does not hold. The column
+records intent; wiring it into every read path is the follow-up.
+
+
 ## [0.14.0] - 2026-10-16
 
 ### Changed - lease reclaim is now on by default (60 minutes)

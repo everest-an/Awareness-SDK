@@ -277,6 +277,17 @@ export function getToolDefinitions() {
           },
 
           // Metadata
+          handoff: {
+            type: 'object',
+            description:
+              'Structured context for whoever picks up this task next. Send it with the transition that releases the work — ' +
+              'e.g. { task_id, status: "open", expect_status: "doing", handoff: {...} } — and it is stored only if you win the ' +
+              'atomic claim, so a losing racer cannot attach context to work someone else holds. ' +
+              'Shape (reuse the Context Pack v2 fields): { goal, files: [], decisions: [], open_questions: [] }. ' +
+              'goal = what "done" means; files = the files that matter; decisions = choices already made and why; ' +
+              'open_questions = what the next agent still has to figure out. ' +
+              'Retrieve it via awareness_lookup({ type: "tasks" }) — the task row carries it back.',
+          },
           verified_by: {
             type: 'string',
             description:
