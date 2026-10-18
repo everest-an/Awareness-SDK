@@ -22,10 +22,16 @@ another agent holds.
 docs/strategy/memory-architecture-v2/02-unified-scope-model.md.
 
 Default is 'shared', which is byte-identical to today's behaviour, so no
-existing install changes. 'private' is opt-in per record. Enforcement on the
-recall path is deliberately NOT part of this change: a half-enforced ACL is
-worse than none, because it implies isolation that does not hold. The column
-records intent; wiring it into every read path is the follow-up.
+existing install changes. 'private' is opt-in per record. Enforcement IS wired: task queries now exclude
+private rows unless the caller identifies as their owner via agent_role. With no
+identity, private rows stay hidden — a safe default, and existing installs are
+unaffected because visibility defaults to 'shared'.
+
+This shipped incomplete in 0.15.0 and is completed here. I had reverted the
+enforcement after a full-suite run failed; the failure turned out to be a
+pre-existing flake in log-writer.test.mjs (reading the log file before the
+writer flushed), which passes 3/3 in isolation. Reverting on that signal was my
+mistake — the red run was not mine.
 
 
 ## [0.14.0] - 2026-10-16
