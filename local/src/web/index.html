@@ -1687,8 +1687,11 @@ function renderTaskDetail(area, taskId) {
     <span style="font-size:0.85rem;color:var(--text-muted)">Priority: ${esc(catLabel(t.priority||'medium'))}</span>
     <select class="task-status-select" data-task-id="${esc(t.id)}" onchange="updateTaskStatus(this)">
       <option value="open"${t.status==='open'?' selected':''}>Open</option>
-      <option value="in_progress"${t.status==='in_progress'?' selected':''}>In Progress</option>
+      <option value="claimed"${t.status==='claimed'?' selected':''}>Claimed</option>
+      <option value="doing"${(t.status==='doing'||t.status==='in_progress')?' selected':''}>Doing</option>
+      <option value="blocked"${t.status==='blocked'?' selected':''}>Blocked</option>
       <option value="done"${t.status==='done'?' selected':''}>Done</option>
+      <option value="failed"${t.status==='failed'?' selected':''}>Failed</option>
     </select>
   </div>`;
   if (t.description) html += `<div style="font-size:0.88rem;color:var(--text-secondary)">${renderMd(t.description)}</div>`;
