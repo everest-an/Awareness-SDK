@@ -1692,9 +1692,63 @@ function renderTaskDetail(area, taskId) {
     </select>
   </div>`;
   if (t.description) html += `<div style="font-size:0.88rem;color:var(--text-secondary)">${renderMd(t.description)}</div>`;
+  html += renderTaskCollab(t);
   html += `<div style="margin-top:16px;font-size:0.78rem;color:var(--text-muted)">Created: ${formatDate(t.created_at)}</div>`;
 
   area.innerHTML = html;
+}
+
+function renderTaskCollab(t) {
+  let out = '';
+  const LEASE_MIN = 60;
+
+  if (t.status === 'claimed' || t.status === 'doing') {
+    const touched = t.updated_at ? new Date(t.updated_at).getTime() : null;
+    if (touched) {
+      const elapsed = (Date.now() - touched) / 60000;
+      const left = Math.round(LEASE_MIN - elapsed);
+      const pct = Math.max(0, Math.min(100, (left / LEASE_MIN) * 100));
+      const expired = left <= 0;
+      const color = expired ? 'var(--red)' : (pct < 25 ? 'var(--yellow, #d9a441)' : 'var(--green, #4ec9a0)');
+      out += `<div style="margin-top:16px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px">
+        <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted)">
+          <span>LEASE${t.agent_role ? ' · ' + esc(t.agent_role) : ''}</span>
+          <span style="color:${color}">${expired ? 'EXPIRED — reclaimable' : left + ' min left'}</span>
+        </div>
+        <div style="margin-top:6px;height:4px;background:var(--bg-hover);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${color}"></div>
+        </div>
+      </div>`;
+    }
+  }
+
+  if (t.handoff) {
+    let pack = null;
+    try { pack = typeof t.handoff === 'string' ? JSON.parse(t.handoff) : t.handoff; } catch {}
+    if (pack) {
+      const list = (arr) => Array.isArray(arr) && arr.length
+        ? `<ul style="margin:4px 0 0 16px;padding:0">${arr.map((x) => `<li>${esc(String(x))}</li>`).join('')}</ul>`
+        : '<span style="color:var(--text-muted)">—</span>';
+      out += `<div style="margin-top:12px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px">
+        <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em">Handoff</div>
+        <div style="margin-top:6px;font-size:0.85rem">${esc(pack.goal || '')}</div>
+        ${pack.files ? `<div style="margin-top:8px;font-size:0.78rem;color:var(--text-muted)">Files</div><div style="font-size:0.82rem">${list(pack.files)}</div>` : ''}
+        ${pack.decisions ? `<div style="margin-top:8px;font-size:0.78rem;color:var(--text-muted)">Decisions</div><div style="font-size:0.82rem">${list(pack.decisions)}</div>` : ''}
+        ${pack.open_questions ? `<div style="margin-top:8px;font-size:0.78rem;color:var(--text-muted)">Open questions</div><div style="font-size:0.82rem">${list(pack.open_questions)}</div>` : ''}
+      </div>`;
+    }
+  }
+
+  if (t.status === 'done') {
+    const ok = !!t.verified_by;
+    out += `<div style="margin-top:12px;border:1px solid ${ok ? 'var(--border)' : 'var(--yellow, #d9a441)'};border-radius:var(--radius-sm);padding:10px 12px;font-size:0.82rem">
+      ${ok
+        ? `<span style="color:var(--green, #4ec9a0)">&#10003; Verified by ${esc(t.verified_by)}</span>${t.verified_at ? ` <span style="color:var(--text-muted)">· ${formatDate(t.verified_at)}</span>` : ''}`
+        : `<span style="color:var(--yellow, #d9a441)">&#9888; Unverified — nobody has signed this off</span>`}
+    </div>`;
+  }
+
+  return out;
 }
 
 function findInAllTasks(id) {
