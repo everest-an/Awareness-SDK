@@ -1011,6 +1011,8 @@ export async function apiSyncRetry(daemon, req, res) {
 export async function apiWorkspaces(res, url) {
   try {
     const { loadWorkspaces } = await import('../core/config.mjs');
+  const { readProjectStatus } = await import('./project-status.mjs');
+  const registry = readProjectStatus();
     const ws = loadWorkspaces() || {};
     const sanitizedEntries = Object.entries(ws).filter(([workspacePath]) => {
       const resolved = path.resolve(workspacePath);
@@ -1995,6 +1997,8 @@ async function apiProjectSummaries(res) {
   const path = await import('node:path');
   const fs = await import('node:fs');
   const { loadWorkspaces } = await import('../core/config.mjs');
+  const { readProjectStatus } = await import('./project-status.mjs');
+  const registry = readProjectStatus();
 
   let Database = null;
   try { ({ default: Database } = await import('better-sqlite3')); } catch { /* file-only mode */ }
@@ -2011,6 +2015,16 @@ async function apiProjectSummaries(res) {
       tasks: null,
       memories: null,
     };
+    const published = registry[dir];
+    if (published && published.tasks) {
+      row.tasks = published.tasks;
+      row.memories = published.memories ?? null;
+      row.hasDb = true;
+      row.source = 'registry';
+      items.push(row);
+      continue;
+    }
+
     const dbPath = path.join(dir, '.awareness', 'index.db');
     if (Database && fs.existsSync(dbPath)) {
       try {
@@ -2023,6 +2037,7 @@ async function apiProjectSummaries(res) {
         };
         row.memories = one("SELECT COUNT(*) AS c FROM memories WHERE status='active'");
         row.hasDb = true;
+        row.source = 'db';
         db.close();
       } catch (err) {
         row.error = err.message;

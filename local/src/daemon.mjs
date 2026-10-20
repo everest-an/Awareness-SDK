@@ -53,6 +53,7 @@ import {
   handleMcpHttp,
 } from './daemon/mcp-http.mjs';
 import { handleHealthz, handleWebUi } from './daemon/http-handlers.mjs';
+import { writeProjectStatus, collectLocalStats } from './daemon/project-status.mjs';
 import { callMcpTool } from './daemon/tool-bridge.mjs';
 import { httpJson } from './daemon/cloud-http.mjs';
 import { startFileWatcher, startWorkspaceWatcher, startGitHeadWatcher } from './daemon/file-watcher.mjs';
@@ -390,6 +391,20 @@ export class AwarenessLocalDaemon {
 
     // ---- F-038: Workspace scanner (background, non-blocking) ----
     this._initWorkspaceScanner();
+
+    // ---- Publish this project's progress into the shared registry ----
+    // Every project reports itself, so no process has to read another project's
+    // database. Written once at boot and then on a slow timer.
+    try {
+      const publish = () => {
+        try {
+          writeProjectStatus(this.projectDir, collectLocalStats(this.indexer));
+        } catch { /* the registry is advisory; never fail the daemon for it */ }
+      };
+      publish();
+      this._projectStatusTimer = setInterval(publish, 60_000);
+      this._projectStatusTimer.unref?.();
+    } catch { /* older installs without the module simply skip it */ }
 
     // ---- Skill decay timer (every 24h) ----
     this._startSkillDecayTimer();
