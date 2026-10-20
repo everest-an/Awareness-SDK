@@ -48,6 +48,14 @@
   <span class="stat"><b id="s-expired">–</b>leased out</span>
   <span class="stat"><b id="s-done">–</b>done</span>
 </header>
+
+<section id="projects" style="padding:16px 20px;border-bottom:1px solid var(--line)">
+  <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-bottom:8px">
+    Projects <span id="p-count" style="color:var(--fg)"></span>
+  </div>
+  <div id="p-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+</section>
+
 <main id="root"><div class="empty">loading…</div></main>
 <footer id="foot"></footer>
 
@@ -117,6 +125,36 @@ fetch('/api/v1/tasks')
     document.getElementById('root').innerHTML =
       '<div class="empty">failed to load: ' + esc(e.message) + '</div>';
   });
+
+function ago(iso) {
+  if (!iso) return 'never';
+  const d = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(d / 60000);
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+Promise.all([
+  fetch('/api/v1/workspaces').then((r) => r.json()).catch(() => ({})),
+  fetch('/healthz').then((r) => r.json()).catch(() => ({})),
+]).then(([ws, health]) => {
+  const active = (health.project_dir || '').toLowerCase();
+  const entries = Object.entries(ws || {})
+    .map(([path, v]) => ({ path, ...v }))
+    .sort((a, b) => new Date(b.lastUsed || 0) - new Date(a.lastUsed || 0));
+  document.getElementById('p-count').textContent = entries.length;
+  document.getElementById('p-list').innerHTML = entries
+    .map((e) => {
+      const isActive = e.path.toLowerCase() === active;
+      return '<span class="chip" style="' + (isActive ? 'border-color:rgba(72,255,176,.7);color:var(--acc)' : '') + '">' +
+        (isActive ? '● ' : '') + esc(e.name || e.path) +
+        ' <span style="color:var(--mut)">' + ago(e.lastUsed) + '</span></span>';
+    })
+    .join('') || '<span class="empty" style="padding:0">no projects registered</span>';
+});
+
 </script>
 </body>
 </html>
