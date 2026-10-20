@@ -98,6 +98,10 @@ export async function handleApiRoute(daemon, req, res, url) {
     return apiWorkspaces(res, url);
   }
 
+  if (route === '/projects/summary' && req.method === 'GET') {
+    return apiProjectSummaries(res);
+  }
+
   // F-064 Phase 2 · Session CRUD (reuses the native sessions table — no new
   // table). Powers the browser extension's "bind this site to a session".
   if (route === '/sessions' && req.method === 'GET') {
@@ -1977,4 +1981,56 @@ function _safeJsonParse(val, fallback) {
     try { const p = JSON.parse(val); if (Array.isArray(p)) return p; } catch {}
   }
   return fallback;
+}
+
+/**
+ * Per-project progress across every workspace the daemon has seen.
+ *
+ * The registry holds only metadata (path, port, name, last used); the numbers
+ * live in each project's own .awareness/index.db. Open them read-only and close
+ * them again, so a project the daemon is not attached to is observed rather than
+ * touched.
+ */
+async function apiProjectSummaries(res) {
+  const path = await import('node:path');
+  const fs = await import('node:fs');
+  const { loadWorkspaces } = await import('../core/config.mjs');
+
+  let Database = null;
+  try { ({ default: Database } = await import('better-sqlite3')); } catch { /* file-only mode */ }
+
+  const ws = loadWorkspaces() || {};
+  const items = [];
+
+  for (const [dir, meta] of Object.entries(ws)) {
+    const row = {
+      dir,
+      name: meta.name || path.basename(dir),
+      lastUsed: meta.lastUsed || null,
+      hasDb: false,
+      tasks: null,
+      memories: null,
+    };
+    const dbPath = path.join(dir, '.awareness', 'index.db');
+    if (Database && fs.existsSync(dbPath)) {
+      try {
+        const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+        const one = (sql) => { try { return db.prepare(sql).get().c; } catch { return null; } };
+        row.tasks = {
+          open: one("SELECT COUNT(*) AS c FROM tasks WHERE status='open'"),
+          doing: one("SELECT COUNT(*) AS c FROM tasks WHERE status IN ('claimed','doing')"),
+          done: one("SELECT COUNT(*) AS c FROM tasks WHERE status='done'"),
+        };
+        row.memories = one("SELECT COUNT(*) AS c FROM memories WHERE status='active'");
+        row.hasDb = true;
+        db.close();
+      } catch (err) {
+        row.error = err.message;
+      }
+    }
+    items.push(row);
+  }
+
+  items.sort((a, b) => new Date(b.lastUsed || 0) - new Date(a.lastUsed || 0));
+  return jsonResponse(res, { items, total: items.length });
 }

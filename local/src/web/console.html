@@ -137,19 +137,24 @@ function ago(iso) {
 }
 
 Promise.all([
-  fetch('/api/v1/workspaces').then((r) => r.json()).catch(() => ({})),
+  fetch('/api/v1/projects/summary').then((r) => r.json()).catch(() => ({ items: [] })),
   fetch('/healthz').then((r) => r.json()).catch(() => ({})),
-]).then(([ws, health]) => {
+]).then(([data, health]) => {
   const active = (health.project_dir || '').toLowerCase();
-  const entries = Object.entries(ws || {})
-    .map(([path, v]) => ({ path, ...v }))
-    .sort((a, b) => new Date(b.lastUsed || 0) - new Date(a.lastUsed || 0));
+  const entries = data.items || [];
   document.getElementById('p-count').textContent = entries.length;
   document.getElementById('p-list').innerHTML = entries
     .map((e) => {
-      const isActive = e.path.toLowerCase() === active;
+      const isActive = e.dir.toLowerCase() === active;
+      const t = e.tasks || {};
+      const prog = e.hasDb
+        ? '<span style="color:var(--mut)">open ' + (t.open ?? '–') +
+          ' · doing ' + (t.doing ?? '–') +
+          ' · done ' + (t.done ?? '–') +
+          ' · mem ' + (e.memories ?? '–') + '</span>'
+        : '<span style="color:var(--mut)">no db</span>';
       return '<span class="chip" style="' + (isActive ? 'border-color:rgba(72,255,176,.7);color:var(--acc)' : '') + '">' +
-        (isActive ? '● ' : '') + esc(e.name || e.path) +
+        (isActive ? '● ' : '') + esc(e.name) + ' ' + prog +
         ' <span style="color:var(--mut)">' + ago(e.lastUsed) + '</span></span>';
     })
     .join('') || '<span class="empty" style="padding:0">no projects registered</span>';

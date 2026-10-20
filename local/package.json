@@ -1,6 +1,6 @@
 {
   "name": "@awareness.market/local",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "Local-first AI agent memory system. No account needed.",
   "license": "Apache-2.0",
   "repository": {
