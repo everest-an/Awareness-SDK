@@ -563,7 +563,8 @@
         "## OpenCode / HyperCode Notes",
         "- Call awareness_init at session start; awareness_recall before work; awareness_record after each change.",
         "- Native plugin: @awareness.market/opencode-plugin goes in the config `plugin` array (no MCP config needed).",
-        "- Config file: opencode.jsonc / opencode.json (project or ~/.config/opencode/); HyperCode uses its baked config + .opencode/."
+        "- Config file: opencode.jsonc / opencode.json (project or ~/.config/opencode/); HyperCode uses its baked config + .opencode/.",
+        "- Squad mode: copy skills/squad into .opencode/skills; awareness_task_board + awareness_task give claim/handoff across agents (cloud memory = billed, cross-machine; local = single machine)."
       ]
     }
   }

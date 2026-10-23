@@ -4,6 +4,7 @@ import type {
   SessionHistoryResult,
   KnowledgeBaseResponse,
   ActionItemsResponse,
+  ActionItem,
   RisksResponse,
   IngestResponse,
   SupersedeResponse,
@@ -709,18 +710,51 @@ export class AwarenessClient {
     return this.post<IngestResponse>("/mcp/events/batch", body);
   }
 
-  private async updateTask(taskId: string, status: string): Promise<unknown> {
+  async updateTask(
+    taskId: string,
+    status: string,
+    extras: {
+      expectStatus?: string;
+      agentRole?: string;
+      handoff?: Record<string, unknown>;
+      verifiedBy?: string;
+      visibility?: string;
+    } = {},
+  ): Promise<unknown> {
+    const extra: Record<string, unknown> = {};
+    if (extras.expectStatus) extra.expect_status = extras.expectStatus;
+    if (extras.agentRole) extra.agent_role = extras.agentRole;
+    if (extras.handoff) extra.handoff = extras.handoff;
+    if (extras.verifiedBy) extra.verified_by = extras.verifiedBy;
+    if (extras.visibility) extra.visibility = extras.visibility;
     if (this.isLocal) {
       return this.mcpCall<unknown>("awareness_record", {
         action: "update_task",
         task_id: taskId,
         status,
+        ...extra,
       });
     }
     return this.patch<unknown>(
       `/memories/${this.memoryId}/insights/action-items/${taskId}`,
-      { status },
+      { status, ...extra },
     );
+  }
+
+  /** Squad board: every agent's tasks in this memory, all statuses. */
+  async getTaskBoard(limit = 200): Promise<ActionItemsResponse> {
+    if (this.isLocal) {
+      const result = await this.mcpCall<Record<string, unknown>>("awareness_lookup", {
+        type: "tasks",
+        limit,
+      });
+      return {
+        action_items: result.tasks as ActionItemsResponse["action_items"],
+        total: Number(result.total ?? 0),
+      };
+    }
+    const params = new URLSearchParams({ limit: String(limit) });
+    return this.get<ActionItemsResponse>(`/memories/${this.memoryId}/insights/action-items`, params);
   }
 
   // -----------------------------------------------------------------------

@@ -9,8 +9,23 @@ Gives OpenCode a long-term memory that survives across sessions — no more forg
 ## What it does
 
 - **Auto-capture** — when a session goes idle, the plugin stores a concise summary of the session into Awareness. Enterprise developer activity automatically becomes searchable memory.
-- **Awareness tools** — registers `awareness_init`, `awareness_recall`, `awareness_record`, `awareness_lookup`, `awareness_apply_skill`, `awareness_mark_skill_used` as native opencode tools (no MCP config required).
+- **Awareness tools** — registers `awareness_init`, `awareness_recall`, `awareness_record`, `awareness_lookup`, `awareness_task_board`, `awareness_task`, `awareness_apply_skill`, `awareness_mark_skill_used` as native opencode tools (no MCP config required).
 - **Cloud or local** — works against the Awareness cloud (`aw_` API key) or a local daemon (`npx @awareness-sdk/local start`).
+
+## Squad mode (multi-agent, cloud)
+
+One memory is the shared brain; the task board is the control plane. A lead
+agent decomposes work into tasks; any number of workers claim, hand off, and
+finish them — across machines and IDEs.
+
+- `awareness_task_board` — every agent's tasks grouped by status (open / claimed / doing / done / blocked / failed)
+- `awareness_task` — atomic claim (`expect_status` CAS), renew, structured handoff, finish, attest (`verified_by`)
+- Bundled skill `skills/squad/SKILL.md` — lead + worker playbooks; copy it into `.opencode/skills/`
+
+Cross-machine squads need **cloud mode** (billed through your Awareness plan);
+local mode is single-machine and free. Progress is visible both via
+`awareness_task_board` inside HyperCode and on the memory's **Task board** tab
+in the browser.
 
 ## Install
 

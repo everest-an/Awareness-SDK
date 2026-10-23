@@ -11,6 +11,7 @@
 
 import { tool } from "@opencode-ai/plugin";
 import type { AwarenessClient } from "./client";
+import type { ActionItem } from "./types";
 
 function toOutput(result: unknown): { output: string } {
   const out = typeof result === "string" ? result : JSON.stringify(result, null, 2);
@@ -33,10 +34,12 @@ export function registerTools(client: AwarenessClient) {
             { step: 2, action: "awareness_recall", when: "BEFORE starting work", what: 'awareness_recall(query="<natural-language question>")' },
             { step: 3, action: "awareness_record", when: "AFTER every meaningful change", what: 'awareness_record(content="<detailed description with reasoning, files changed>")' },
             { step: 4, action: "awareness_record session end", when: "BEFORE ending session", what: 'awareness_record(content="<final session summary>")' },
+            { step: 5, action: "awareness_task_board + awareness_task", when: "In a multi-agent squad", what: "Read the board, then claim before working and hand off with context" },
           ],
           tips: {
             recall_vs_lookup: "awareness_recall = search by meaning. awareness_lookup = get by type (<50ms).",
             record_rule: "Record decisions, bug fixes, workflows, and user preferences — NOT every small edit.",
+            squad_rule: "One memory = one brain. Claim before working (expect_status), hand off with {goal,files,decisions,open_questions}, let the board carry progress — never duplicate a claim.",
           },
         });
       },
@@ -177,6 +180,73 @@ export function registerTools(client: AwarenessClient) {
           | "failed";
         return toOutput(
           await client.markSkillUsed(String(args.skill_id ?? ""), outcome),
+        );
+      },
+    }),
+
+    // 7. Squad board — progress across ALL agents in this memory
+    awareness_task_board: tool({
+      description:
+        "Show the squad task board for this memory, grouped by status (open/claimed/doing/done/blocked/failed). " +
+        "Read it BEFORE claiming work and AFTER finishing so everyone sees progress. One fast DB query.",
+      args: {
+        limit: tool.schema.number().optional().describe("Max tasks (default 200)"),
+      },
+      async execute(args) {
+        const resp = await client.getTaskBoard(typeof args.limit === "number" ? args.limit : undefined);
+        const groups: Record<string, ActionItem[]> = {
+          open: [],
+          claimed: [],
+          doing: [],
+          done: [],
+          blocked: [],
+          failed: [],
+        };
+        const alias: Record<string, string> = { pending: "open", in_progress: "doing", completed: "done" };
+        for (const item of resp.action_items ?? []) {
+          const key = alias[String(item.status ?? "open")] ?? String(item.status ?? "open");
+          (groups[key] ??= []).push(item);
+        }
+        return toOutput({ total: resp.total, groups });
+      },
+    }),
+
+    // 8. Squad protocol — atomic claim / renew / handoff / finish / attest
+    awareness_task: tool({
+      description:
+        "Atomic multi-agent task protocol. claim: {task_id, status:'claimed', expect_status:'open', agent_role} " +
+        "(returns {status:'conflict', claimed:false, current_agent_role} if another agent holds it). " +
+        "renew: {status:'doing', expect_status:'doing'}. " +
+        "hand off: {status:'open', expect_status:'doing', handoff:'{\"goal\":...,\"files\":[...],\"decisions\":[...],\"open_questions\":[...]}'}. " +
+        "finish: {status:'done'|'blocked'|'failed', expect_status:'doing'}. " +
+        "attest: {verified_by:'reviewer_agent'} (first verifier wins).",
+      args: {
+        task_id: tool.schema.string().describe("Task id from awareness_task_board"),
+        status: tool.schema.string().optional().describe("open | claimed | doing | done | blocked | failed"),
+        expect_status: tool.schema.string().optional().describe("CAS guard: 'open' to claim, 'doing' to finish or hand off"),
+        agent_role: tool.schema.string().optional().describe("Claimer identity"),
+        handoff: tool.schema.string().optional().describe("JSON string {goal, files, decisions, open_questions}"),
+        verified_by: tool.schema.string().optional().describe("Attestation identity (first wins)"),
+      },
+      async execute(args) {
+        const extras: {
+          expectStatus?: string;
+          agentRole?: string;
+          handoff?: Record<string, unknown>;
+          verifiedBy?: string;
+        } = {};
+        if (typeof args.expect_status === "string" && args.expect_status) extras.expectStatus = args.expect_status;
+        if (typeof args.agent_role === "string" && args.agent_role) extras.agentRole = args.agent_role;
+        if (typeof args.handoff === "string" && args.handoff.trim()) {
+          try {
+            extras.handoff = JSON.parse(args.handoff) as Record<string, unknown>;
+          } catch {
+            return toOutput({ error: "handoff must be valid JSON: {goal, files, decisions, open_questions}" });
+          }
+        }
+        if (typeof args.verified_by === "string" && args.verified_by) extras.verifiedBy = args.verified_by;
+        return toOutput(
+          await client.updateTask(String(args.task_id ?? ""), String(args.status ?? ""), extras),
         );
       },
     }),

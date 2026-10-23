@@ -95,6 +95,15 @@ export interface ActionItem {
   estimated_effort?: string;
   user_id?: string;
   agent_role?: string;
+  handoff?: {
+    goal?: string;
+    files?: string[];
+    decisions?: string[];
+    open_questions?: string[];
+  } | null;
+  verified_by?: string | null;
+  verified_at?: string | null;
+  visibility?: string;
 }
 
 export interface Risk {
