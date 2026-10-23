@@ -1412,6 +1412,10 @@ class MemoryCloudClient:
         memory_id: str,
         task_id: str,
         status: str,
+        expect_status: Optional[str] = None,
+        agent_role: Optional[str] = None,
+        handoff: Optional[Dict[str, Any]] = None,
+        verified_by: Optional[str] = None,
         trace_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -1429,10 +1433,19 @@ class MemoryCloudClient:
         Returns:
             Updated action item dict with id, title, priority, status, updated_at.
         """
+        payload: Dict[str, Any] = {"status": status}
+        if expect_status:
+            payload["expect_status"] = expect_status
+        if agent_role:
+            payload["agent_role"] = agent_role
+        if handoff is not None:
+            payload["handoff"] = handoff
+        if verified_by:
+            payload["verified_by"] = verified_by
         data, resolved_trace = self._request(
             method="PATCH",
             path=f"/memories/{memory_id}/insights/action-items/{task_id}",
-            json_payload={"status": status},
+            json_payload=payload,
             trace_id=trace_id,
         )
         return self._attach_trace(data, resolved_trace)

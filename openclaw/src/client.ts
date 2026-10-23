@@ -862,18 +862,30 @@ export class AwarenessClient {
   private async updateTask(
     taskId: string,
     status: string,
+    extras?: {
+      expectStatus?: string;
+      agentRole?: string;
+      handoff?: Record<string, unknown>;
+      verifiedBy?: string;
+    },
   ): Promise<unknown> {
+    const extra: Record<string, unknown> = {};
+    if (extras?.expectStatus) extra.expect_status = extras.expectStatus;
+    if (extras?.agentRole) extra.agent_role = extras.agentRole;
+    if (extras?.handoff) extra.handoff = extras.handoff;
+    if (extras?.verifiedBy) extra.verified_by = extras.verifiedBy;
     if (this.isLocal) {
       return this.mcpCall<unknown>("awareness_record", {
         action: "update_task",
         task_id: taskId,
         status,
+        ...extra,
       });
     }
 
     return this.patch<unknown>(
       `/memories/${this.memoryId}/insights/action-items/${taskId}`,
-      { status },
+      { status, ...extra },
     );
   }
 

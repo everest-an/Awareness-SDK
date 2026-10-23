@@ -1218,24 +1218,32 @@ export class MemoryCloudClient {
   }
 
   /**
-   * Update an action item's status.
+   * Update an action item's status, claim it, hand it off, or attest it.
    *
-   * Call after completing a task found via getPendingTasks or getSessionContext.
-   * Always call record() first to log what you did, then updateTaskStatus.
-   *
-   * status: "completed" | "in_progress" | "pending"
-   * taskId: from getPendingTasks result tasks[i].id or getSessionContext open_tasks[i].id
+   * status: open | claimed | doing | done | blocked | failed (legacy: pending | in_progress | completed)
+   * expectStatus: CAS guard — the update only lands if the task still holds it; pass "open" to claim.
+   * handoff: { goal, files, decisions, open_questions } carried by the same atomic transition.
+   * verifiedBy: first verifier wins; later verifiers get a conflict.
    */
   async updateTaskStatus(input: {
     memoryId: string;
     taskId: string;
-    status: "completed" | "in_progress" | "pending";
+    status: "open" | "claimed" | "doing" | "done" | "blocked" | "failed" | "pending" | "in_progress" | "completed";
+    expectStatus?: "open" | "claimed" | "doing" | "done" | "blocked" | "failed" | "pending" | "in_progress" | "completed";
+    agentRole?: string;
+    handoff?: { goal?: string; files?: string[]; decisions?: string[]; open_questions?: string[] };
+    verifiedBy?: string;
     traceId?: string;
   }): Promise<UpdateTaskResult> {
+    const body: Record<string, unknown> = { status: input.status };
+    if (input.expectStatus) body.expect_status = input.expectStatus;
+    if (input.agentRole) body.agent_role = input.agentRole;
+    if (input.handoff) body.handoff = input.handoff;
+    if (input.verifiedBy) body.verified_by = input.verifiedBy;
     return this.requestJson<UpdateTaskResult>({
       method: "PATCH",
       path: `/memories/${input.memoryId}/insights/action-items/${input.taskId}`,
-      jsonBody: { status: input.status },
+      jsonBody: body,
       traceId: input.traceId,
     });
   }

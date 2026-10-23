@@ -207,7 +207,7 @@
     {
       "name": "awareness_record",
       "short_desc": "Save memory — pass ONE content string, daemon handles the rest",
-      "long_desc": "Save what you did/decided/learned to persistent memory. Pass a single content string and the daemon defaults action=remember and triggers client-side salience-aware extraction asynchronously. Example: awareness_record(content=\"Today I decided to switch from Pinecone to pgvector because...\"). Advanced actions (remember_batch, update_task, submit_insights) still require explicit action= for backwards compat."
+      "long_desc": "Save what you did/decided/learned to persistent memory. Pass a single content string and the daemon defaults action=remember and triggers client-side salience-aware extraction asynchronously. Example: awareness_record(content=\"Today I decided to switch from Pinecone to pgvector because...\"). Advanced actions (remember_batch, update_task, submit_insights) still require explicit action= for backwards compat. Multi-agent task protocol via action=\"update_task\": claim { task_id, status:\"claimed\", expect_status:\"open\", agent_role } (returns {status:\"conflict\", claimed:false, current_agent_role} if another agent holds it), renew { status:\"doing\", expect_status:\"doing\" }, hand off { status:\"open\", expect_status:\"doing\", handoff:{goal,files,decisions,open_questions} }, finish { status:\"done\"|\"blocked\"|\"failed\", expect_status:\"doing\" }, attest { verified_by } (first verifier wins). Claims are leased for 60 minutes."
     },
     {
       "name": "awareness_mark_skill_used",
