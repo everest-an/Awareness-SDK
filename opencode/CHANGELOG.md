@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-10-23
+
+### Added — Context Guard (auto context management)
+
+- **Pre-overflow checkpoint** — watches `message.updated` token usage; at `contextGuardRatio` (default 75%, floor 50k tokens) it writes a compact `context_checkpoint` to memory (objective / decisions / open tasks / files).
+- **Compaction brief** — an existing checkpoint is now treated as the source of truth for decisions and file state.
+- **Post-compaction rehydration** — after `session.compacted`, the next turn injects a one-line instruction to recall the checkpoint instead of re-reading raw logs.
+- **New options** — `contextGuard`, `contextGuardRatio`, `contextGuardMinTokens`, `contextLimit`; env `AWARENESS_CONTEXT_GUARD`, `AWARENESS_CONTEXT_GUARD_RATIO`, `AWARENESS_CONTEXT_LIMIT`.
+
 ## 0.2.1 — 2026-10-23
 
 ### Added — capability-gap recommendation

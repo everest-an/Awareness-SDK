@@ -13,6 +13,14 @@ export interface PluginConfig {
   localUrl: string;
   /** Minimum message count before auto-capture fires. Default: 0 (capture all). */
   captureMinTurns?: number;
+  /** Context Guard: write a structured checkpoint before the window overflows. Default: true. */
+  contextGuard?: boolean;
+  /** Fraction of the context window that triggers a checkpoint. Default: 0.75. */
+  contextGuardRatio?: number;
+  /** Never checkpoint below this absolute token count. Default: 50000. */
+  contextGuardMinTokens?: number;
+  /** Model context window in tokens. Default: 128000. */
+  contextLimit?: number;
 }
 
 // ---------------------------------------------------------------------------

@@ -36,6 +36,11 @@ function resolveConfig(options: Record<string, unknown> | undefined): PluginConf
     recallLimit: raw.recallLimit !== undefined ? Number(raw.recallLimit) : 8,
     localUrl: String(raw.localUrl ?? DEFAULT_LOCAL_URL),
     captureMinTurns: raw.captureMinTurns !== undefined ? Number(raw.captureMinTurns) : undefined,
+    contextGuard: raw.contextGuard !== undefined ? Boolean(raw.contextGuard) : true,
+    contextGuardRatio: raw.contextGuardRatio !== undefined ? Number(raw.contextGuardRatio) : 0.75,
+    contextGuardMinTokens:
+      raw.contextGuardMinTokens !== undefined ? Number(raw.contextGuardMinTokens) : 50_000,
+    contextLimit: raw.contextLimit !== undefined ? Number(raw.contextLimit) : 128_000,
   };
 
   // Environment variables take priority (for serverless/CI deployments)
@@ -44,6 +49,11 @@ function resolveConfig(options: Record<string, unknown> | undefined): PluginConf
   if (process.env.AWARENESS_BASE_URL) config.baseUrl = process.env.AWARENESS_BASE_URL;
   if (process.env.AWARENESS_AGENT_ROLE) config.agentRole = process.env.AWARENESS_AGENT_ROLE;
   if (process.env.AWARENESS_LOCAL_URL) config.localUrl = process.env.AWARENESS_LOCAL_URL;
+  if (process.env.AWARENESS_CONTEXT_GUARD === "0") config.contextGuard = false;
+  if (process.env.AWARENESS_CONTEXT_GUARD_RATIO) {
+    config.contextGuardRatio = Number(process.env.AWARENESS_CONTEXT_GUARD_RATIO);
+  }
+  if (process.env.AWARENESS_CONTEXT_LIMIT) config.contextLimit = Number(process.env.AWARENESS_CONTEXT_LIMIT);
 
   return config;
 }

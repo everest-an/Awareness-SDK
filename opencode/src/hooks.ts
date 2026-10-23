@@ -140,6 +140,7 @@ const COMPACTION_BRIEF = [
   "(2) decisions made and why, (3) open/incomplete tasks, (4) hard constraints and pitfalls,",
   "(5) files currently being edited. Drop raw tool output and long logs — the full history stays",
   "retrievable via awareness_recall(query=\"...\"), so do NOT re-inline it into the prompt.",
+  "If a context-checkpoint exists in Awareness, treat it as the source of truth for decisions and file state.",
 ].join(" ");
 
 /** Best-effort, non-blocking capture. Never throws, never blocks the idle path. */
@@ -178,6 +179,47 @@ async function captureSession(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Context Guard — checkpoint before the window overflows.
+// ---------------------------------------------------------------------------
+
+const _lastCheckpointAt = new Map<string, number>();
+const _pendingRehydrateAt = new Map<string, number>();
+const CHECKPOINT_COOLDOWN_MS = 10 * 60 * 1000;
+const REHYDRATE_TTL_MS = 30 * 60 * 1000;
+
+/** Best-effort: write a compact structured checkpoint to memory before compaction. */
+async function writeContextCheckpoint(
+  client: AwarenessClient,
+  oc: OpencodeClient,
+  sessionID: string,
+  usedTokens: number,
+  limit: number,
+): Promise<void> {
+  try {
+    const res = await oc.session.messages({ path: { id: sessionID }, query: { limit: 200 } });
+    const list = res.data ?? [];
+    const { summary } = buildTurnBrief(
+      flattenMessages(list as Array<{ info: { role: string }; parts: unknown[] }>),
+    );
+    const ratio = limit > 0 ? Math.round((usedTokens / limit) * 100) : 0;
+    const content = [
+      `[context-checkpoint] context ~${usedTokens}/${limit} tokens (${ratio}%) - written before compaction.`,
+      summary || "No distilled summary available; use awareness_recall for details.",
+      "After compaction: recall this checkpoint instead of re-reading raw logs or re-deriving decisions.",
+    ].join("\n");
+    await client.record(content, {
+      event_type: "context_checkpoint",
+      source: "opencode-plugin",
+      used_tokens: usedTokens,
+      context_ratio: ratio,
+      checkpoint_version: 1,
+    });
+  } catch {
+    // Checkpoint is best-effort; never break the session.
+  }
+}
+
 export function registerHooks(
   client: AwarenessClient,
   config: PluginConfig,
@@ -189,21 +231,58 @@ export function registerHooks(
       input: { sessionID: string },
       output: { context: string[]; prompt?: string },
     ) => Promise<void>;
+    "experimental.chat.system.transform"?: (
+      input: { sessionID?: string; model: unknown },
+      output: { system: string[] },
+    ) => Promise<void>;
   } = {};
 
-  // Context-explosion guard — always active (independent of autoCapture).
   hooks["experimental.session.compacting"] = async (_input, output) => {
     output.context.push(COMPACTION_BRIEF);
   };
 
-  if (config.autoCapture) {
-    hooks.event = async ({ event }: { event: Event }) => {
-      if (event.type !== "session.idle") return;
-      const sessionID = event.properties.sessionID;
+  hooks["experimental.chat.system.transform"] = async (input, output) => {
+    const sessionID = input.sessionID;
+    if (!sessionID) return;
+    const at = _pendingRehydrateAt.get(sessionID);
+    if (!at) return;
+    _pendingRehydrateAt.delete(sessionID);
+    if (Date.now() - at > REHYDRATE_TTL_MS) return;
+    output.system.push(
+      "This session was compacted. A structured pre-compaction checkpoint is stored in Awareness memory - " +
+        'call awareness_recall(query="context-checkpoint") before re-deriving decisions, open tasks, or file state; ' +
+        "do not re-read raw logs.",
+    );
+  };
+
+  hooks.event = async ({ event }: { event: Event }) => {
+    if (event.type === "session.idle") {
+      if (!config.autoCapture) return;
       // Fire-and-forget — never block the idle path or slow the UI.
-      void captureSession(client, config, oc, sessionID);
-    };
-  }
+      void captureSession(client, config, oc, event.properties.sessionID);
+      return;
+    }
+
+    if (event.type === "session.compacted") {
+      _pendingRehydrateAt.set(event.properties.sessionID, Date.now());
+      return;
+    }
+
+    if (event.type === "message.updated" && config.contextGuard !== false) {
+      const info = event.properties.info;
+      if (info.role !== "assistant" || info.summary) return;
+      const used = (info.tokens.input ?? 0) + (info.tokens.cache?.read ?? 0);
+      if (used <= 0) return;
+      const limit = config.contextLimit ?? 128_000;
+      if (used < (config.contextGuardMinTokens ?? 50_000)) return;
+      if (used / limit < (config.contextGuardRatio ?? 0.75)) return;
+      const sessionID = info.sessionID;
+      const last = _lastCheckpointAt.get(sessionID) ?? 0;
+      if (Date.now() - last < CHECKPOINT_COOLDOWN_MS) return;
+      _lastCheckpointAt.set(sessionID, Date.now());
+      void writeContextCheckpoint(client, oc, sessionID, used, limit);
+    }
+  };
 
   return hooks;
 }

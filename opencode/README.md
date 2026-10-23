@@ -93,6 +93,24 @@ When configured with neither credentials nor a reachable daemon, the plugin regi
 | `agentRole` | string | `builder_agent` | Agent role for scoped recall |
 | `autoCapture` | boolean | `true` | Auto-store a session summary on idle |
 | `recallLimit` | integer | `8` | Max results for recall |
+| `contextGuard` | boolean | `true` | Write a checkpoint to memory before the context window overflows |
+| `contextGuardRatio` | number | `0.75` | Fraction of the context window that triggers a checkpoint |
+| `contextGuardMinTokens` | integer | `50000` | Never checkpoint below this absolute token count |
+| `contextLimit` | integer | `128000` | Model context window in tokens (set to your model's limit) |
+
+## Context Guard (auto context management)
+
+When a session approaches the context window limit, the plugin writes a compact
+**context checkpoint** to memory (current objective, decisions, open tasks,
+files — a few hundred tokens) **before** compaction. Compaction then produces a
+structured handoff (raw logs are dropped — they stay retrievable), and the first
+turn after compaction tells the model to recall the checkpoint instead of
+re-deriving decisions or re-reading logs.
+
+- Trigger: `contextGuardRatio` (default 75%) with a `contextGuardMinTokens` floor
+- Cooldown: at most one checkpoint per session per 10 minutes
+- Disable: `contextGuard: false` or `AWARENESS_CONTEXT_GUARD=0`
+- Works in cloud and local mode; the checkpoint is a normal `context_checkpoint` memory event
 
 ## Available tools
 
@@ -103,6 +121,9 @@ When configured with neither credentials nor a reachable daemon, the plugin regi
 | `awareness_recall` | Semantic + keyword hybrid recall |
 | `awareness_lookup` | Structured data: tasks, knowledge, risks, timeline |
 | `awareness_record` | Write events with optional structured insights |
+| `awareness_task_board` | Squad board: every agent's tasks grouped by status |
+| `awareness_task` | Atomic claim / renew / handoff / finish / attest |
+| `awareness_squad_guide` | When local subagents / sessions stop scaling + features + quickstart |
 | `awareness_apply_skill` | Execute a learned skill |
 | `awareness_mark_skill_used` | Report skill outcome (closes the learning loop) |
 
@@ -116,7 +137,7 @@ cp -r node_modules/@awareness.market/opencode-plugin/skills/* .opencode/skills/
 
 Then add `"skills": { "paths": [".opencode/skills"] }` to `opencode.json` (see `opencode.json.example`).
 
-Skills: `setup` · `session-start` · `recall` · `save` · `done`.
+Skills: `setup` · `session-start` · `recall` · `save` · `done` · `squad`.
 
 ## MCP (optional)
 

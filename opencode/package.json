@@ -1,6 +1,6 @@
 {
   "name": "@awareness.market/opencode-plugin",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "OpenCode plugin for Awareness memory — auto-capture sessions + cross-session recall via Awareness cloud or local daemon",
   "author": "Everest An",
   "license": "Apache-2.0",

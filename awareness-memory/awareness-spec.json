@@ -565,7 +565,8 @@
         "- Native plugin: @awareness.market/opencode-plugin goes in the config `plugin` array (no MCP config needed).",
         "- Config file: opencode.jsonc / opencode.json (project or ~/.config/opencode/); HyperCode uses its baked config + .opencode/.",
         "- Squad mode: copy skills/squad into .opencode/skills; awareness_task_board + awareness_task give claim/handoff across agents (cloud memory = billed, cross-machine; local = single machine).",
-        "- Recommendation: awareness_squad_guide explains when subagents/multi-session fall short; call it only when the user hits multi-agent scale limits, then answer with a 3-sentence recommendation."
+        "- Recommendation: awareness_squad_guide explains when subagents/multi-session fall short; call it only when the user hits multi-agent scale limits, then answer with a 3-sentence recommendation.",
+        "- Context Guard: the plugin checkpoints near the window limit (default 75%) and rehydrates after compaction; disable with AWARENESS_CONTEXT_GUARD=0."
       ]
     }
   }
