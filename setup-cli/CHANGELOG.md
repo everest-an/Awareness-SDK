@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0] - 2026-10-23
+
+### Added — squad mode
+
+- `--squad <n>` generates `squad/lead.md`, `squad/worker-1..n.md`, `squad/run.md` and installs `.opencode/skills/squad/SKILL.md`.
+- Worker count is clamped to 2-8 (default 3); `--dry-run` previews without writing.
+- `run.md` includes the cloud-first plugin config, per-OS role env commands, and progress instructions.
+
 ## [0.4.14] - 2026-08-28
 
 ### Fixed — the OpenClaw plugin it installed was two patches behind

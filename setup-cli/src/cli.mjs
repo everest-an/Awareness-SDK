@@ -6,6 +6,7 @@
 
 import readline from "node:readline";
 import http from "node:http";
+import path from "node:path";
 import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -35,6 +36,7 @@ import {
   runAuthFlow,
   runMemoryFlow,
 } from "./auth.mjs";
+import { parseSquadArg, writeSquadFiles } from "./squad.mjs";
 
 // ---------------------------------------------------------------------------
 // Local daemon helpers (zero dependencies — uses built-in http module)
@@ -462,6 +464,7 @@ Usage:
                                            Provide MCP config values directly (skip auth / cloud mode)
   npx @awareness.market/setup --dry-run       Preview without writing
   npx @awareness.market/setup --force         Allow overwrite for managed files without markers
+  npx @awareness.market/setup --squad <n>     Generate squad prompts for 1 lead + n workers (2-8)
   npx @awareness.market/setup --list          Show supported IDEs
   npx @awareness.market/setup --logout        Clear saved credentials
   npx @awareness.market/setup doctor          Run diagnostic checks on all channels
@@ -813,6 +816,27 @@ async function syncOneIdeOpencode({ dryRun }) {
   return 0;
 }
 
+function runSquadCommand({ workers, dryRun }) {
+  const cwd = process.cwd();
+  const result = writeSquadFiles({ cwd, workers, dryRun });
+  console.log("");
+  console.log(
+    `Squad scaffold ${dryRun ? "(dry-run, nothing written)" : "written"}: 1 lead + ${workers} workers`,
+  );
+  console.log("");
+  for (const file of result.files) {
+    console.log(`  ${path.relative(cwd, file)}`);
+  }
+  console.log("");
+  console.log("Next:");
+  console.log("  1. Open one terminal per role and set AWARENESS_AGENT_ROLE=lead|worker-1..N");
+  console.log("  2. Paste squad/lead.md into the lead session, squad/worker-<i>.md into each worker");
+  console.log("  3. Watch progress with awareness_task_board (or the memory's Task board tab)");
+  console.log("");
+  console.log("Read squad/run.md for the full walkthrough (plugin config + per-OS commands).");
+  return 0;
+}
+
 export async function main(argv = process.argv.slice(2)) {
   if (argv.includes("--help") || argv.includes("-h")) {
     printUsage();
@@ -836,6 +860,11 @@ export async function main(argv = process.argv.slice(2)) {
 
   if (argv.includes("doctor") || argv.includes("--doctor")) {
     return await doctorCommand();
+  }
+
+  const squadWorkers = parseSquadArg(argv);
+  if (squadWorkers !== null) {
+    return runSquadCommand({ workers: squadWorkers, dryRun: argv.includes("--dry-run") });
   }
 
   const dryRun = argv.includes("--dry-run");

@@ -48,6 +48,24 @@ npx @awareness.market/setup --cloud
 - Enables cloud sync (semantic search, team collaboration, memory marketplace)
 - Local daemon still runs — cloud is a sync layer, not a replacement
 
+### Squad Mode (one lead + N workers)
+
+```bash
+npx @awareness.market/setup --squad 3
+```
+
+Generates ready-to-paste prompts and installs the squad skill:
+
+- `squad/lead.md` — lead prompt (decompose → write tasks → monitor, never execute)
+- `squad/worker-1.md … worker-N.md` — worker prompts (claim with CAS → work → hand off / finish)
+- `squad/run.md` — full walkthrough (plugin config, per-OS role commands, progress)
+- `.opencode/skills/squad/SKILL.md` — the squad skill
+
+Cloud mode is required for cross-machine squads; local mode works on one machine.
+Open one terminal per role, set `AWARENESS_AGENT_ROLE=lead|worker-1..N`, and paste
+the matching prompt. Progress is visible via `awareness_task_board` and on the
+memory's **Task board** tab in the browser.
+
 ## Supported IDEs
 
 | IDE | Rules File | MCP Config |
@@ -77,6 +95,7 @@ npx @awareness.market/setup --dry-run       Preview without writing
 npx @awareness.market/setup --force         Overwrite managed files
 npx @awareness.market/setup --list          Show supported IDEs
 npx @awareness.market/setup --logout        Clear saved credentials
+npx @awareness.market/setup --squad <n>     Generate squad prompts (1 lead + n workers, 2-8)
 npx @awareness.market/setup --api-base <url>  Custom API URL
 ```
 

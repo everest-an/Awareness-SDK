@@ -8,6 +8,7 @@ let cliModule;
 let rulesModule;
 let authModule;
 let headlessModule;
+let squadModule;
 
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "awareness-setup-"));
@@ -18,6 +19,7 @@ test.before(async () => {
   rulesModule = await import("../src/rules.mjs");
   authModule = await import("../src/auth.mjs");
   headlessModule = await import("../src/headless-auth.mjs");
+  squadModule = await import("../src/squad.mjs");
 });
 
 test("syncIdeRules creates managed_block files when missing", () => {
@@ -1071,4 +1073,43 @@ test("openBrowserSilently: returns boolean, never throws", () => {
 test("DEFAULT_POLL_TIMEOUT_SEC is a sane value below backend TTL", () => {
   assert.ok(headlessModule.DEFAULT_POLL_TIMEOUT_SEC > 300);
   assert.ok(headlessModule.DEFAULT_POLL_TIMEOUT_SEC < 900);
+});
+
+test("parseSquadArg returns null without the flag and clamps the count", () => {
+  assert.equal(squadModule.parseSquadArg(["--cloud"]), null);
+  assert.equal(squadModule.parseSquadArg(["--squad", "3"]), 3);
+  assert.equal(squadModule.parseSquadArg(["--squad=99"]), 8);
+  assert.equal(squadModule.parseSquadArg(["--squad=1"]), 2);
+  assert.equal(squadModule.parseSquadArg(["--squad"]), 3);
+});
+
+test("--squad scaffolds lead/worker/run prompts and the squad skill", async () => {
+  const cwd = makeTempDir();
+  const prev = process.cwd();
+  process.chdir(cwd);
+  try {
+    const code = await cliModule.main(["--squad", "3"]);
+    assert.equal(code, 0);
+  } finally {
+    process.chdir(prev);
+  }
+  assert.ok(fs.existsSync(path.join(cwd, "squad", "lead.md")));
+  assert.ok(fs.existsSync(path.join(cwd, "squad", "worker-1.md")));
+  assert.ok(fs.existsSync(path.join(cwd, "squad", "worker-3.md")));
+  assert.ok(!fs.existsSync(path.join(cwd, "squad", "worker-4.md")));
+  assert.match(fs.readFileSync(path.join(cwd, "squad", "lead.md"), "utf-8"), /agent_role: lead/);
+  assert.match(fs.readFileSync(path.join(cwd, "squad", "worker-2.md"), "utf-8"), /worker-2/);
+  assert.ok(fs.existsSync(path.join(cwd, ".opencode", "skills", "squad", "SKILL.md")));
+});
+
+test("--squad --dry-run writes nothing", async () => {
+  const cwd = makeTempDir();
+  const prev = process.cwd();
+  process.chdir(cwd);
+  try {
+    await cliModule.main(["--squad", "2", "--dry-run"]);
+  } finally {
+    process.chdir(prev);
+  }
+  assert.ok(!fs.existsSync(path.join(cwd, "squad", "lead.md")));
 });
