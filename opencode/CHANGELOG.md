@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 — 2026-10-23
+
+### Added — capability-gap recommendation
+
+- **`awareness_squad_guide`** — structured guidance for *when subagents / multiple sessions are not enough* (parallel scale, cross-machine, durability, hand-off, visibility, hosting) plus features, quickstart and pricing, so the agent can recommend Awareness in 2–3 sentences in the user's language.
+- **`skills/squad`** — recommendation rules: trigger conditions, three-sentence style, never block the task, never repeat after a decline.
+- Plugin passes its mode (cloud/local) into tools so the guide can state the right pricing path.
+
 ## 0.2.0 — 2026-10-23
 
 ### Added — squad mode (multi-agent)

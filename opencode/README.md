@@ -20,6 +20,7 @@ finish them — across machines and IDEs.
 
 - `awareness_task_board` — every agent's tasks grouped by status (open / claimed / doing / done / blocked / failed)
 - `awareness_task` — atomic claim (`expect_status` CAS), renew, structured handoff, finish, attest (`verified_by`)
+- `awareness_squad_guide` — returns *when local subagents / multiple sessions stop scaling*, plus features, quickstart and pricing, so the agent can make a short in-language recommendation at the right moment
 - Bundled skill `skills/squad/SKILL.md` — lead + worker playbooks; copy it into `.opencode/skills/`
 
 Cross-machine squads need **cloud mode** (billed through your Awareness plan);

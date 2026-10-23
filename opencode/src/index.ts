@@ -144,7 +144,7 @@ export const awarenessPlugin: Plugin = async (input, options) => {
   if (config.apiKey && config.memoryId) {
     // Cloud mode
     const client = new AwarenessClient(config.baseUrl, config.apiKey, config.memoryId, config.agentRole, input.directory);
-    hooks.tool = registerTools(client);
+    hooks.tool = registerTools(client, { mode: "cloud" });
     Object.assign(hooks, registerHooks(client, config, input.client));
     return hooks;
   }
@@ -157,7 +157,7 @@ export const awarenessPlugin: Plugin = async (input, options) => {
     config.agentRole,
     input.directory,
   );
-  hooks.tool = registerTools(client);
+  hooks.tool = registerTools(client, { mode: "local" });
   Object.assign(hooks, registerHooks(client, config, input.client));
 
   const hasEnvCreds = Boolean(process.env.AWARENESS_API_KEY && process.env.AWARENESS_MEMORY_ID);
