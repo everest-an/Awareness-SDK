@@ -901,9 +901,25 @@ export class AwarenessLocalDaemon {
       // A handoff rides along with the transition so it only lands if this caller
       // actually won the race — a loser must not attach context to work another
       // agent holds. COALESCE keeps an existing handoff when none is supplied.
-      const handoffPayload = params.handoff
-        ? (typeof params.handoff === 'string' ? params.handoff : JSON.stringify(params.handoff))
-        : null;
+      // Handoff must be a JSON object: reject malformed payloads instead of
+      // persisting them, otherwise every reader that parses the column breaks.
+      let handoffPayload = params.handoff ?? null;
+      if (typeof handoffPayload === 'string') {
+        try {
+          const parsed = JSON.parse(handoffPayload);
+          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            return { error: 'handoff must be a JSON object' };
+          }
+          handoffPayload = JSON.stringify(parsed);
+        } catch {
+          return { error: 'handoff must be valid JSON' };
+        }
+      } else if (handoffPayload !== null) {
+        if (typeof handoffPayload !== 'object' || Array.isArray(handoffPayload)) {
+          return { error: 'handoff must be a JSON object' };
+        }
+        handoffPayload = JSON.stringify(handoffPayload);
+      }
       const res = this.indexer.db
         .prepare(
           `UPDATE tasks SET status = ?, agent_role = ?, updated_at = ?,
