@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.20.2] - 2026-10-24
+
+### Fixed - handoff payload validation
+
+`awareness_record` used to persist any string in `handoff` verbatim. A client
+that sent `"not-json"` corrupted the column for every reader that parses it
+(task board, plugins, sync). The daemon now validates before the CAS write:
+strings must parse as a JSON object, objects are stored as JSON, anything else
+returns `{ error: "handoff must be valid JSON" }` / `{ error: "handoff must be
+a JSON object" }` and leaves the row untouched.
+
+Found by the real-daemon run of `scripts/squad-eval.mjs` (5/5 checks now pass
+against a live local daemon, not just the in-process mock). Regression tests:
+`test/task-handoff-validation.test.mjs`.
+
 ## [0.15.0] - 2026-10-16
 
 ### Added - structured handoff
