@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.21.0] - 2026-10-25
+
+### Added - collaboration console (web UI)
+
+The local dashboard now has a Collaboration view built from the shared task
+ledger: one card per agent (online dot from a 5-minute heartbeat window,
+pause/freeze badges, task status chips, unverified deliveries), a task
+dispatch topology, timeline swimlanes, and memory references per agent.
+
+### Added - agent presence
+
+Every MCP tool call carrying `agent_role` records a heartbeat in the new
+`agent_heartbeats` table, so the console can show who is live right now.
+Agents that only exist through tasks (including `unassigned`) still appear.
+
+### Added - intervention: pause / freeze
+
+`POST /agents/{role}/state` sets `active | paused | frozen`:
+
+- `paused` cuts routing: dispatch refuses to hand the agent new work.
+- `frozen` freezes memory: `awareness_record` / task updates are rejected
+  with `agent_frozen` while the agent can still read.
+
+### Added - dispatch
+
+- `POST /tasks/dispatch` - manual dispatch to a named agent. Atomic: only
+  succeeds while the task is still `open`, so two dispatchers cannot hand the
+  same task to two agents.
+- `POST /tasks/auto-dispatch` - scores every active agent and assigns the
+  best one:
+
+      score = overlap*2 + idle(+1) + online(+1) - load*0.5
+
+  `overlap` is token overlap between the task text and the agent role,
+  `online` means a heartbeat within 5 minutes, `load` counts
+  claimed/in_progress tasks. The response carries the full scoring trace
+  (top 5 candidates) so the UI can explain the decision.
+
+### Added - tests
+
+`test/collab-console.test.mjs` (14 cases) covers heartbeats, presence
+merging, the frozen write gate, pause/freeze exclusion from scoring, CAS
+dispatch, auto-dispatch traces and the no-candidate path.
+
+### Fixed - i18n
+
+All new collaboration strings now go through `t()` with English and Chinese
+entries; nothing is hardcoded in the markup.
 ## [0.20.2] - 2026-10-24
 
 ### Fixed - handoff payload validation

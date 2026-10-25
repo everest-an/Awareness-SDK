@@ -735,6 +735,15 @@ export class AwarenessLocalDaemon {
   static MAX_CONTENT_BYTES = 1024 * 1024;
   /** Write a single memory, index it, and trigger knowledge extraction. */
   async _remember(params) {
+    // Frozen agents may read but not write — freeze is the memory lockout,
+    // not a routing cut (that's 'paused'). See setAgentState / GET /agents.
+    if (this.indexer?.getAgentState?.(params.agent_role) === 'frozen') {
+      return {
+        error: 'agent_frozen',
+        agent_role: params.agent_role || null,
+        hint: 'Memory is frozen for this agent — set its state back to active to resume writes.',
+      };
+    }
     // Agent budget (OPT-IN): cap records per agent_role per rolling hour.
     // AWARENESS_AGENT_RECORD_LIMIT_PER_HOUR=0 (default) disables the check, so stock
     // behaviour is byte-unchanged. A multi-agent fleet sets it so one runaway worker
@@ -844,6 +853,13 @@ export class AwarenessLocalDaemon {
    * (kept on the `indexTask` path so FTS + task embeddings stay in sync).
    */
   async _updateTask(params) {
+    if (this.indexer?.getAgentState?.(params.agent_role) === 'frozen') {
+      return {
+        error: 'agent_frozen',
+        agent_role: params.agent_role || null,
+        hint: 'Memory is frozen for this agent — set its state back to active to resume writes.',
+      };
+    }
     if (!params.task_id) {
       return { error: 'task_id is required for update_task' };
     }

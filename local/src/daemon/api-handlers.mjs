@@ -78,6 +78,23 @@ export async function handleApiRoute(daemon, req, res, url) {
     return apiUpdateTask(daemon, req, res, taskId);
   }
 
+  if (route === '/agents' && req.method === 'GET') {
+    return apiListAgents(daemon, req, res);
+  }
+
+  if (route === '/tasks/dispatch' && req.method === 'POST') {
+    return apiDispatchTask(daemon, req, res);
+  }
+
+  if (route === '/tasks/auto-dispatch' && req.method === 'POST') {
+    return apiAutoDispatchTask(daemon, req, res);
+  }
+
+  if (route.startsWith('/agents/') && route.endsWith('/state') && req.method === 'POST') {
+    const role = decodeURIComponent(route.replace('/agents/', '').replace('/state', ''));
+    return apiSetAgentState(daemon, req, res, role);
+  }
+
   if (route === '/sync/status' && req.method === 'GET') {
     return apiSyncStatus(daemon, req, res);
   }
@@ -912,6 +929,125 @@ export async function apiUpdateTask(daemon, req, res, taskId) {
     status: 'ok',
     task_id: taskId,
     new_status: newStatus,
+  });
+}
+
+/**
+ * List every agent the daemon has seen, with live presence + task aggregates.
+ * Presence is derived by the UI from `last_seen_at` (no expiry enforced here).
+ */
+export function apiListAgents(daemon, _req, res) {
+  if (!daemon.indexer) {
+    return jsonResponse(res, { items: [], total: 0 });
+  }
+  const items = daemon.indexer.getAgents();
+  return jsonResponse(res, { items, total: items.length });
+}
+
+/**
+ * Set an agent's operating state: active | paused (cut routing) | frozen (freeze memory).
+ */
+export async function apiSetAgentState(daemon, req, res, role) {
+  if (!role) return jsonResponse(res, { error: 'agent_role is required' }, 400);
+  const body = await readBody(req);
+  let payload;
+  try { payload = JSON.parse(body); } catch { return jsonResponse(res, { error: 'Invalid JSON' }, 400); }
+  const state = payload.state;
+  if (!daemon.indexer) return jsonResponse(res, { error: 'Indexer not available' }, 503);
+  const ok = daemon.indexer.setAgentState(role, state);
+  if (!ok) return jsonResponse(res, { error: 'invalid state (active/paused/frozen)' }, 400);
+  return jsonResponse(res, { status: 'ok', agent_role: role, state });
+}
+
+/**
+ * Auto-dispatch: score every active agent for the task and hand it to the
+ * best candidate. Mirrors the cloud F-104 scoring, adapted to local data
+ * (online bonus + idle bonus − load penalty + token overlap).
+ */
+export async function apiAutoDispatchTask(daemon, req, res) {
+  const body = await readBody(req);
+  let payload;
+  try { payload = JSON.parse(body); } catch { return jsonResponse(res, { error: 'Invalid JSON' }, 400); }
+  const { task_id } = payload;
+  if (!task_id) return jsonResponse(res, { error: 'task_id is required' }, 400);
+  if (!daemon.indexer) return jsonResponse(res, { error: 'Indexer not available' }, 503);
+
+  const task = daemon.indexer.db.prepare('SELECT * FROM tasks WHERE id = ?').get(task_id);
+  if (!task) return jsonResponse(res, { error: 'Task not found' }, 404);
+
+  const candidates = daemon.indexer.scoreAgentsForTask(`${task.title || ''} ${task.description || ''}`);
+  if (candidates.length === 0) {
+    return jsonResponse(res, { status: 'no_candidate', task_id, reason: 'no_active_agent', hint: 'All agents are paused/frozen — no active agent to dispatch to.' }, 409);
+  }
+
+  for (const c of candidates) {
+    const r = daemon.indexer.db
+      .prepare(`UPDATE tasks SET status = 'claimed', agent_role = ?, updated_at = ? WHERE id = ? AND status = 'open'`)
+      .run(c.agent_role, nowISO(), task_id);
+    if (r.changes > 0) {
+      return jsonResponse(res, {
+        status: 'ok', task_id, agent_role: c.agent_role, new_status: 'claimed',
+        dispatch: { score: c.score, overlap: c.overlap, idle: c.idle, online: c.online, load: c.load, candidates: candidates.slice(0, 5) },
+      });
+    }
+  }
+  return jsonResponse(res, { status: 'conflict', task_id, reason: 'not_open' }, 409);
+}
+
+/**
+ * Dispatch an open task to a specific agent — the push half of multi-agent
+ * dispatching (the pull half is the agent claiming via awareness_update_task).
+ * Atomic: only succeeds if the task is still 'open', so two dispatchers can't
+ * hand the same task to two agents.
+ */
+export async function apiDispatchTask(daemon, req, res) {
+  const body = await readBody(req);
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return jsonResponse(res, { error: 'Invalid JSON' }, 400);
+  }
+
+  const { task_id, agent_role } = payload;
+  if (!task_id || !agent_role) {
+    return jsonResponse(res, { error: 'task_id and agent_role are required' }, 400);
+  }
+  if (!daemon.indexer) {
+    return jsonResponse(res, { error: 'Indexer not available' }, 503);
+  }
+
+  const agentState = daemon.indexer.getAgentState(agent_role);
+  if (agentState === 'paused' || agentState === 'frozen') {
+    return jsonResponse(res, { status: 'blocked', task_id, agent_role, reason: 'agent_' + agentState }, 409);
+  }
+
+  const now = nowISO();
+  const res2 = daemon.indexer.db
+    .prepare(
+      `UPDATE tasks SET status = 'claimed', agent_role = ?, updated_at = ?
+       WHERE id = ? AND status = 'open'`
+    )
+    .run(String(agent_role), now, task_id);
+
+  if (res2.changes === 0) {
+    const cur = daemon.indexer.db
+      .prepare('SELECT status, agent_role FROM tasks WHERE id = ?')
+      .get(task_id);
+    return jsonResponse(res, {
+      status: 'conflict',
+      task_id,
+      reason: 'not_open',
+      current_status: cur?.status ?? null,
+      current_agent_role: cur?.agent_role ?? null,
+    }, 409);
+  }
+
+  return jsonResponse(res, {
+    status: 'ok',
+    task_id,
+    agent_role: String(agent_role),
+    new_status: 'claimed',
   });
 }
 

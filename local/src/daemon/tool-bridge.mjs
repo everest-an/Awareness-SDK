@@ -453,6 +453,12 @@ export async function callMcpTool(daemon, name, args) {
 
     const success = !isMcpErrorResult(result);
     trackToolCall(name, success);
+    // Presence heartbeat — record who is live right now. agent_role is the
+    // caller's identity and rides on every awareness_* call in a multi-agent
+    // fleet; no heartbeat means the agent stays invisible to the console.
+    if (args && args.agent_role) {
+      try { daemon.indexer?.touchAgentHeartbeat(args.agent_role, name); } catch { /* non-fatal */ }
+    }
     return result;
   } catch (error) {
     if (KNOWN_TOOLS.has(name)) {
