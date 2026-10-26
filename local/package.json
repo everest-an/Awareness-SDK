@@ -75,6 +75,8 @@
   "bugs": {
     "url": "https://github.com/everest-an/Awareness-Market/issues"
   },
+  "author": "Everest An <e@awareness.market> (https://awareness.market)",
+  "maintainers": [{ "name": "Everest An", "email": "e@awareness.market" }],
   "homepage": "https://awareness.market",
   "mcpName": "io.github.everest-an/awareness-local"
 }

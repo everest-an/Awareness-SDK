@@ -46,5 +46,7 @@
   "bugs": {
     "url": "https://github.com/everest-an/Awareness-SDK/issues"
   },
+  "author": "Everest An <e@awareness.market> (https://awareness.market)",
+  "maintainers": [{ "name": "Everest An", "email": "e@awareness.market" }],
   "homepage": "https://awareness.market"
 }
