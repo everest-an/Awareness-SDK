@@ -242,3 +242,15 @@ See [Awareness vs. Alternatives](https://awareness.market/sdk-docs/ALTERNATIVES.
 ## License
 
 Apache-2.0
+
+---
+
+## Contact
+
+- **Email**: e@awareness.market
+- **Website**: https://awareness.market
+- **Docs**: https://awareness.market/docs
+- **Issues**: https://github.com/everest-an/Awareness-Market/issues
+
+Commercial licensing, private deployment, enterprise support — email
+**e@awareness.market**, we reply within 24 hours.
