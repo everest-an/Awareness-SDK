@@ -1,5 +1,34 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed - knowledge card provenance
+
+Cards used to be written with `source = null` and `source_memories = []` no
+matter where they came from, so the provenance columns looked designed but
+were dead. All local write paths now fill them:
+
+- A memory written with inline insights produces a card whose
+  `source_memories` contains that memory id (the remember path was dropping
+  `metadata.id` before extraction).
+- Rule-based extraction copies `metadata.source` onto the card.
+- `submit_insights` records the caller's `source` (default `mcp`) and honours
+  an explicit `source_memory_id`, in both SQLite and the Markdown frontmatter.
+- Cloud-pulled cards and risks keep `source = "cloud"` (plus their memory link
+  when the cloud payload has one).
+- Auto-generated MOC cards identify themselves as `source = "moc"`.
+
+`test/provenance-chain.test.mjs` covers saveCard, the rule fallback,
+`remember()`, and `submit_insights` against a real Indexer.
+
+### Fixed - extracted card file location
+
+`KnowledgeExtractor` looked for `.awareness` on `store.awarenessDir` /
+`store.projectDir`, but the daemon hands it a `MemoryStore` that only exposes
+`rootDir`. Extracted card Markdown therefore landed in
+`process.cwd()/.awareness` instead of the project directory. It now resolves
+the MemoryStore root, so card files sit next to the index that describes them.
+
 ## [0.21.0] - 2026-10-25
 
 ### Added - collaboration console (web UI)

@@ -1314,6 +1314,7 @@ export class Indexer {
           confidence: 0.8,
           status: 'active',
           tags: JSON.stringify([tag]),
+          source: 'moc',
           source_memories: JSON.stringify([]),
           link_count_outgoing: count,
           link_count_incoming: 0,
