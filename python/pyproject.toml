@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "awareness-memory-cloud"
 version = "2.6.1"
-description = "Python SDK for Awareness Memory Cloud"
+description = "Python SDK for Awareness - structured synthetic memory for AI agents, with verifiable state history (ERC-8350)."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"

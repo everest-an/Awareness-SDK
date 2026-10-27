@@ -1,7 +1,7 @@
 {
   "name": "@awareness.market/local",
   "version": "0.21.0",
-  "description": "Local-first AI agent memory system. No account needed.",
+  "description": "Local-first memory for AI agents. Structured synthetic memory cards (decision / preference / risk), verifiable state history via ERC-8350, hybrid search. Runs offline, no account.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

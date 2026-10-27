@@ -1,7 +1,7 @@
 {
   "name": "@awareness.market/setup",
   "version": "0.6.0",
-  "description": "CLI tool to inject Awareness Memory workflow rules into IDE config files",
+  "description": "Inject Awareness memory workflow rules into IDE config files (Claude Code, Cursor, Windsurf, OpenCode).",
   "bin": {
     "awareness-setup": "src/cli.mjs"
   },
