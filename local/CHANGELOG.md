@@ -12,6 +12,10 @@ loopback-only: `GET /api/v1/update/status`, `POST /api/v1/update/drain`,
 `POST /api/v1/update/cancel`. No behavior change unless a control endpoint is
 called.
 
+Version checks (`checkForUpdate`), a 1→2→4→8→15 min retry backoff, and
+trial-install verification (`installTrialVersion`) are in place for the
+supervisor (slice 2).
+
 ## [0.21.1] - 2026-10-28
 
 ### Fixed - knowledge card provenance
