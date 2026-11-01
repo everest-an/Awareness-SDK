@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.22.0] - 2026-11-02
 
 ### Added — rolling-upgrade drain groundwork (F-096 slice 1)
 
