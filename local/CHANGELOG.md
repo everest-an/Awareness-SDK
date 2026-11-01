@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added — rolling-upgrade drain groundwork (F-096 slice 1)
+
+A daemon can now be asked to drain before a version switch: new HTTP/MCP
+requests receive `503` + `Retry-After: 2`, in-flight requests finish (bounded
+by `AWARENESS_DRAIN_TIMEOUT`, default 60s), and `/healthz` keeps reporting
+`draining` so the supervisor can follow the transition. Control endpoints are
+loopback-only: `GET /api/v1/update/status`, `POST /api/v1/update/drain`,
+`POST /api/v1/update/cancel`. No behavior change unless a control endpoint is
+called.
+
 ## [0.21.1] - 2026-10-28
 
 ### Fixed - knowledge card provenance

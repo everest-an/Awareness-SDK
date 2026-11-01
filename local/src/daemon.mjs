@@ -34,8 +34,10 @@ import {
   isSemanticallyRelated,
   jsonResponse,
   nowISO,
+  readBody,
   splitPreferences,
 } from './daemon/helpers.mjs';
+import { DrainState } from './daemon/drain-state.mjs';
 import { attachFileLogger, detachFileLogger } from './daemon/log-writer.mjs';
 import {
   loadDaemonConfig,
@@ -195,6 +197,14 @@ export class AwarenessLocalDaemon {
 
     // Active MCP sessions (session-id → transport)
     this._mcpSessions = new Map();
+
+    // F-096: rolling upgrade drain state. Off unless the update control
+    // endpoint is called; default request handling is unchanged.
+    this._drain = new DrainState({
+      timeoutMs: Number(process.env.AWARENESS_DRAIN_TIMEOUT || 60_000),
+      onTimeout: (snapshot) =>
+        console.warn('[awareness-local] drain timeout — forcing switch', JSON.stringify(snapshot)),
+    });
   }
 
   // -----------------------------------------------------------------------
@@ -566,7 +576,63 @@ export class AwarenessLocalDaemon {
    * @param {http.ServerResponse} res
    */
   async _handleRequest(req, res) {
+    const url = new URL(req.url || '/', 'http://localhost');
+    const pathname = url.pathname;
+
+    // Update control is local-only and stays reachable while draining, so the
+    // supervisor can always ask for status or cancel an aborted upgrade.
+    if (pathname.startsWith('/api/v1/update/')) {
+      if (!this._isLoopbackRequest(req)) return jsonResponse(res, { error: 'forbidden' }, 403);
+      return this._handleUpdateControl(req, res, pathname);
+    }
+
+    // Health checks must keep answering 200 while draining: the supervisor
+    // uses them to decide whether the old child is still alive.
+    if (pathname !== '/healthz') {
+      const release = this._drain.tryTrack();
+      if (!release) {
+        res.setHeader('Retry-After', '2');
+        return jsonResponse(
+          res,
+          { status: 'draining', toVersion: this._drain.snapshot().toVersion },
+          503,
+        );
+      }
+      try {
+        return await handleHttpRequestImpl(this, req, res);
+      } finally {
+        release();
+      }
+    }
+
     return handleHttpRequestImpl(this, req, res);
+  }
+
+  _isLoopbackRequest(req) {
+    const addr = req.socket?.remoteAddress || '';
+    return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+  }
+
+  async _handleUpdateControl(req, res, pathname) {
+    if (pathname === '/api/v1/update/status' && req.method === 'GET') {
+      return jsonResponse(res, { status: 'ok', drain: this._drain.snapshot() });
+    }
+    if (pathname === '/api/v1/update/drain' && req.method === 'POST') {
+      let toVersion = null;
+      try {
+        const raw = await readBody(req);
+        if (raw) toVersion = JSON.parse(raw).toVersion || null;
+      } catch {
+        // An empty or non-JSON body simply means "drain without a target".
+      }
+      this._drain.beginDrain(toVersion);
+      return jsonResponse(res, { status: 'draining', drain: this._drain.snapshot() }, 202);
+    }
+    if (pathname === '/api/v1/update/cancel' && req.method === 'POST') {
+      this._drain.cancelDrain();
+      return jsonResponse(res, { status: 'ok', drain: this._drain.snapshot() });
+    }
+    return jsonResponse(res, { error: 'not found' }, 404);
   }
 
 

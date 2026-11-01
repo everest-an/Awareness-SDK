@@ -43,6 +43,8 @@ export function handleHealthz(daemon, res, { version }) {
       auto_cjk_detection: true,
     },
     stats,
+    draining: !!daemon._drain?.isDraining(),
+    drain: daemon._drain?.snapshot() || null,
   });
 }
 
