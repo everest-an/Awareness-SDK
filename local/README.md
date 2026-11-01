@@ -160,6 +160,21 @@ helpers — `getDaemonUrl`, `checkDaemonHealth`, `getDaemonStatus`, `getMcpUrl`,
 `loadLocalConfig` — not the memory API itself. Memory goes through MCP or REST,
 which is also how Claude Code and every other client reaches it.
 
+## Rolling upgrades (0.22.0+)
+
+`awareness-local start` runs the daemon under a supervisor. Upgrades drain
+in-flight work instead of killing the process:
+
+- During an upgrade, new HTTP/MCP requests get `503` + `Retry-After: 2` while
+  in-flight requests finish (bounded by `AWARENESS_DRAIN_TIMEOUT`, default 60s).
+- `awareness-local update` checks npm, trial-installs the new version, drains,
+  and switches only after the replacement passes its health check.
+- `awareness-local doctor` shows the active version, the last update error, and
+  the next retry.
+- A failed switch restores the previous child and backs off 1→2→4→8→15 min.
+- Opt-in only: pass `--auto-update` (or set `AWARENESS_AUTO_UPDATE=1`) to check
+  every 5 minutes. Defaults perform no registry checks.
+
 ## Web Dashboard
 
 The daemon serves a local web UI at **<http://localhost:37800/>** — browse your
