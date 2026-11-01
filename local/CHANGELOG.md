@@ -16,6 +16,15 @@ Version checks (`checkForUpdate`), a 1→2→4→8→15 min retry backoff, and
 trial-install verification (`installTrialVersion`) are in place for the
 supervisor (slice 2).
 
+### Added — supervisor + update/doctor (F-096 slice 3)
+
+`awareness-local start` now runs under a supervisor that owns the daemon
+child. `awareness-local update` asks it to check, trial-install, drain and
+switch; `doctor` reports the active version, last error and next retry.
+Failed switches restore the previous child and back off 1→15 min. Defaults
+are unchanged: without `--auto-update` the supervisor performs no registry
+checks.
+
 ## [0.21.1] - 2026-10-28
 
 ### Fixed - knowledge card provenance

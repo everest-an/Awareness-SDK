@@ -21,6 +21,7 @@ import os from 'node:os';
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { assertSafeWorkspaceRoot } from '../src/core/workspace-root.mjs';
+import { readSupervisorState, Supervisor } from '../src/daemon/supervisor.mjs';
 
 // ---------------------------------------------------------------------------
 // Argv parsing
@@ -393,9 +394,16 @@ async function cmdStart(flags) {
 
     const logFd = fs.openSync(logPath, 'a');
 
+    const autoUpdate = flags['auto-update'] === true || process.env.AWARENESS_AUTO_UPDATE === '1';
     const child = spawn(
       process.execPath,
-      [thisFile, 'start', '--foreground', '--project', projectDir, '--port', String(port)],
+      [
+        thisFile,
+        'supervisor',
+        '--project', projectDir,
+        '--port', String(port),
+        ...(autoUpdate ? ['--auto-update'] : []),
+      ],
       {
         detached: true,
         stdio: ['ignore', logFd, logFd],
@@ -462,6 +470,20 @@ async function cmdStart(flags) {
  */
 async function cmdStop(flags) {
   const projectDir = resolveProjectDir(flags);
+  const port = resolvePort(flags, projectDir);
+  const supervisorState = readSupervisorState(projectDir);
+  if (supervisorState?.controlPort) {
+    const res = await httpPostJson(supervisorState.controlPort, '/shutdown', {});
+    if (res) {
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        const health = await httpGet(port, '/healthz');
+        if (!health || health.status !== 200) break;
+      }
+      console.log('Awareness Local daemon stopped (supervisor)');
+      process.exit(0);
+    }
+  }
   const pid = readPid(projectDir);
 
   if (!pid) {
@@ -1002,11 +1024,14 @@ Commands:
   anchor    ERC-8350 memory anchoring: 'anchor status' | 'anchor flush' (F-088)
   benchmark Run recall benchmark against a JSONL dataset
   deals     Open Deal Board: 'deals list' | 'deals publish' (anonymous, no API key)
+  update    Check for a newer version and apply it via the supervisor (F-096)
+  doctor    Show daemon + supervisor + update state
 
 Options:
   --project <dir>      Project directory (default: current directory)
   --port <port>        HTTP port (default: 37800)
   --foreground         Run in foreground (don't detach)
+  --auto-update        Check npm every 5 min and roll forward safely (opt-in)
   --no-open            Dashboard: print the URL without launching a browser
   --dataset <path>     Benchmark JSONL dataset path
   --backend <kind>     builtin | qmd | hybrid | all (benchmark only)
@@ -1038,6 +1063,85 @@ Examples:
   npx @awareness.market/local deals list --q H100 --direction supply
   npx @awareness.market/local deals publish --direction supply --category compute --title "H100 available" --body "40x H100 SXM, Shenzhen"
 `);
+}
+
+// ---------------------------------------------------------------------------
+// Update / doctor (F-096)
+// ---------------------------------------------------------------------------
+
+function readPackageVersion() {
+  try {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const pkg = JSON.parse(fs.readFileSync(path.join(here, '..', 'package.json'), 'utf8'));
+    return pkg.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
+async function cmdSupervisor(flags) {
+  const projectDir = assertSafeWorkspaceRoot(resolveProjectDir(flags), 'daemon workspace');
+  const port = resolvePort(flags, projectDir);
+  const autoUpdate = flags['auto-update'] === true || process.env.AWARENESS_AUTO_UPDATE === '1';
+  const supervisor = new Supervisor({
+    projectDir,
+    port,
+    binPath: fileURLToPath(import.meta.url),
+    currentVersion: readPackageVersion(),
+    autoUpdate,
+    controlPort: 0,
+  });
+  await supervisor.start();
+  const shutdown = async () => {
+    await supervisor.stop();
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
+
+async function cmdUpdate(flags) {
+  const projectDir = resolveProjectDir(flags);
+  const state = readSupervisorState(projectDir);
+  if (!state?.controlPort) {
+    console.log('Awareness Local is not running under a supervisor; start it with `awareness-local start` first.');
+    process.exit(0);
+  }
+  const res = await httpPostJson(state.controlPort, '/check', {});
+  if (!res) {
+    console.error('Update check failed: supervisor not responding');
+    process.exit(1);
+  }
+  const body = typeof res.body === 'string' ? res.body : JSON.stringify(res.body, null, 2);
+  console.log(body);
+  process.exit(res.status === 200 ? 0 : 1);
+}
+
+async function cmdDoctor(flags) {
+  const projectDir = resolveProjectDir(flags);
+  const port = resolvePort(flags, projectDir);
+  const state = readSupervisorState(projectDir);
+  const health = await httpGet(port, '/healthz');
+  const healthy = Boolean(health && health.status === 200);
+  if (healthy) {
+    const data = JSON.parse(health.body);
+    console.log(`Daemon: ${data.status} · version ${data.version} · pid ${data.pid} · port ${port}`);
+  } else {
+    console.log(`Daemon: not responding on port ${port}`);
+  }
+  if (state) {
+    const update = state.update || {};
+    console.log(
+      `Supervisor: pid ${state.pid} · child ${state.childPid} · auto-update ${state.autoUpdate ? 'on' : 'off'} · active ${state.version}`,
+    );
+    console.log(
+      `Update state: attempts ${update.attempts || 0} · last error ${update.lastError || 'none'} · next attempt ${update.nextAttemptAt ? new Date(update.nextAttemptAt).toISOString() : 'now'}`,
+    );
+    if (update.lastResult) console.log(`Last result: ${JSON.stringify(update.lastResult)}`);
+  } else {
+    console.log('Supervisor: not running (direct daemon or stopped)');
+  }
+  process.exit(healthy ? 0 : 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -1079,6 +1183,15 @@ async function main() {
       break;
     case 'anchor':
       await cmdAnchor(flags);
+      break;
+    case 'update':
+      await cmdUpdate(flags);
+      break;
+    case 'doctor':
+      await cmdDoctor(flags);
+      break;
+    case 'supervisor':
+      await cmdSupervisor(flags);
       break;
     default:
       console.error(`Unknown command: ${command}`);
