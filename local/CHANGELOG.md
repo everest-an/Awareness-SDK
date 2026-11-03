@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.1] - 2026-11-02
+
+### Docs — rolling upgrades in the package README
+
+0.22.0 shipped the supervisor/update/doctor surface but its README (the page
+npm shows) did not mention it. This patch carries the documented commands and
+behavior; no runtime changes.
+
 ## [0.22.0] - 2026-11-02
 
 ### Added — rolling-upgrade drain groundwork (F-096 slice 1)
