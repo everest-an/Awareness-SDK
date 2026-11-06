@@ -21,7 +21,9 @@
 
 import process from 'node:process';
 import { argv, env, exit } from 'node:process';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join, dirname } from 'node:path';
 
 const HOST = env.AWARENESS_HOST || 'http://localhost:8000';
 const API_KEY = env.AWARENESS_API_KEY;
@@ -61,8 +63,15 @@ function parseFlags(args) {
   const rest = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a.startsWith('--')) { flags[a.slice(2)] = args[i + 1]; i += 1; }
-    else rest.push(a);
+    if (a.startsWith('--')) {
+      const next = args[i + 1];
+      if (next === undefined || next.startsWith('--')) {
+        flags[a.slice(2)] = true;
+      } else {
+        flags[a.slice(2)] = next;
+        i += 1;
+      }
+    } else rest.push(a);
   }
   return { flags, rest };
 }
@@ -208,6 +217,72 @@ async function cmdAgent(args) {
   }
 }
 
+async function cmdConnect(rest) {
+  const { flags } = parseFlags(rest);
+  const token = flags.token || env.AWARENESS_TENANT_TOKEN;
+  const base = (flags.url || env.AWARENESS_HOST || 'https://awareness.market').replace(/\/$/, '');
+  if (!token) die('usage: awareness connect --token <tenant-token> [--url https://awareness.market] [--client claude|cursor] [--write]');
+
+  const res = await fetch(`${base}/api/v1/tenant/whoami`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const text = await res.text();
+  let info;
+  try { info = text ? JSON.parse(text) : null; } catch { info = text; }
+  if (!res.ok) die(`token rejected (HTTP ${res.status}): ${typeof info === 'string' ? info : JSON.stringify(info)}`, 1);
+
+  const t = info.tenant || {};
+  console.log(`database: ${t.id || '?'}  plan: ${t.plan || '?'}  status: ${t.status || '?'}`);
+  console.log(`api:      ${info.api_url}`);
+  console.log(`mcp:      ${info.mcp_url}`);
+  if (info.ssh_command) console.log(`ssh:      ${info.ssh_command}`);
+
+  if (info.ssh_command && t.status === 'active') {
+    console.log('\nRun the ssh command above with your issued key to reach the node.');
+  } else if (t.status && t.status !== 'active') {
+    console.log('\nThe database is still provisioning — rerun this command when status is active.');
+  }
+
+  const mcpConfig = {
+    mcpServers: {
+      awareness: {
+        type: 'http',
+        url: info.mcp_url,
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    },
+  };
+
+  const writePath = flags.write
+    ? (flags.write === true ? defaultConfigPath(flags.client) : flags.write)
+    : null;
+
+  if (writePath) {
+    let existing = {};
+    try { existing = JSON.parse(await readFile(writePath, 'utf8')); } catch { existing = {}; }
+    existing.mcpServers = { ...(existing.mcpServers || {}), ...mcpConfig.mcpServers };
+    await mkdir(dirname(writePath), { recursive: true });
+    await writeFile(writePath, `${JSON.stringify(existing, null, 2)}\n`, 'utf8');
+    console.log(`\nwrote ${writePath}`);
+  } else {
+    console.log('\nMCP config:');
+    console.log(JSON.stringify(mcpConfig, null, 2));
+    console.log('\nAdd --client claude --write (or --client cursor --write) to install it automatically.');
+  }
+}
+
+function defaultConfigPath(client) {
+  const home = homedir();
+  if (client === 'cursor') return join(home, '.cursor', 'mcp.json');
+  if (process.platform === 'win32') {
+    return join(env.APPDATA || join(home, 'AppData', 'Roaming'), 'Claude', 'claude_desktop_config.json');
+  }
+  if (process.platform === 'darwin') {
+    return join(home, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+  }
+  return join(home, '.config', 'Claude', 'claude_desktop_config.json');
+}
+
 async function main() {
   const [cmd, ...rest] = argv.slice(2);
   switch (cmd) {
@@ -217,10 +292,11 @@ async function main() {
     case 'record':  await cmdRecord(rest);     break;
     case 'pack':    await cmdPack(rest);       break;
     case 'agent':   await cmdAgent(rest);      break;
+    case 'connect': await cmdConnect(rest);    break;
     case '-h':
     case '--help':
     case undefined:
-      console.log('awareness <cmd>  — doctor | balance | recall | record | pack {install|list|publish} | agent {list|install}');
+      console.log('awareness <cmd>  — doctor | balance | recall | record | connect | pack {install|list|publish} | agent {list|install}');
       break;
     default:
       die(`unknown command: ${cmd}`);
