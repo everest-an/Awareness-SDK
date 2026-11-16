@@ -110,6 +110,12 @@ class MemoryCloudClient:
         self.backoff_seconds = max(0.0, backoff_seconds)
         self.session = session or requests.Session()
         self.session_prefix = session_prefix
+        # Client-side retrieval cache: repeated identical queries within the
+        # TTL skip the network entirely (cross-region round trips dominate).
+        self._retrieve_cache_ttl = max(
+            0.0, float(os.getenv("AWARENESS_SDK_CACHE_TTL", "30"))
+        )
+        self._retrieve_cache: Dict[str, Any] = {}
         self.default_source = default_source
         self._session_cache: Dict[str, str] = {}
 
@@ -305,6 +311,19 @@ class MemoryCloudClient:
         )
         return [item for item in data if isinstance(item, dict)] if isinstance(data, list) else []
 
+    def _store_retrieve_cache(self, key: str, value: Dict[str, Any]) -> None:
+        if not key or self._retrieve_cache_ttl <= 0:
+            return
+        import copy as _copy
+
+        self._retrieve_cache[key] = (
+            time.time() + self._retrieve_cache_ttl,
+            _copy.deepcopy(value),
+        )
+        if len(self._retrieve_cache) > 512:
+            for stale in list(self._retrieve_cache)[:128]:
+                self._retrieve_cache.pop(stale, None)
+
     def retrieve(
         self,
         memory_id: str,
@@ -423,6 +442,22 @@ class MemoryCloudClient:
         if hyde_hint and hyde_hint.strip():
             body["hyde_hint"] = hyde_hint.strip()
 
+        cache_key = ""
+        if self._retrieve_cache_ttl > 0 and (detail or "") != "debug":
+            import copy as _copy
+            import hashlib as _hashlib
+
+            cache_key = _hashlib.sha256(
+                json.dumps(
+                    {"mid": memory_id, "body": body},
+                    sort_keys=True,
+                    default=str,
+                ).encode("utf-8")
+            ).hexdigest()
+            _hit = self._retrieve_cache.get(cache_key)
+            if _hit and _hit[0] > time.time():
+                return _copy.deepcopy(_hit[1])
+
         # Local daemon bridge: route through awareness_recall MCP tool.
         # F-053 single-parameter surface — pass only `query` and let the daemon
         # auto-route (query-type classifier + recency channel + budget-tier
@@ -458,7 +493,9 @@ class MemoryCloudClient:
                 daemon_args["hyde_hint"] = hyde_hint.strip()
             daemon_result = self.call_local_daemon("awareness_recall", daemon_args)
             items = daemon_result.get("items") or daemon_result.get("results") or []
-            return {"results": items}
+            result = {"results": items}
+            self._store_retrieve_cache(cache_key, result)
+            return result
 
         payload, resolved_trace_id = self._request(
             method="POST",
@@ -466,7 +503,9 @@ class MemoryCloudClient:
             json_payload=body,
             trace_id=trace_id,
         )
-        return self._attach_trace(payload, resolved_trace_id)
+        result = self._attach_trace(payload, resolved_trace_id)
+        self._store_retrieve_cache(cache_key, result)
+        return result
 
     def retrieve_with_hyde(
         self,
