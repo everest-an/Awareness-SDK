@@ -17,6 +17,7 @@
 
   let SITE = null;      // matched rule-pack site entry
   let CONNECTED = false;
+  let MODE = null;      // 'cloud' | 'local' | 'off'
   let lastCaptureSig = null;
   let rootObserver = null;
   let quiesceTimer = null;
@@ -53,6 +54,7 @@
     const resp = await send({ type: 'GET_BOOTSTRAP', url: location.href });
     if (!resp?.ok || !resp.rulepack) return;
     CONNECTED = !!resp.connected;
+    MODE = resp.mode || null;
     SITE = matchSite(resp.rulepack, location.href);
     if (!SITE) return; // no adapter for this page
     startObserving();
@@ -164,7 +166,7 @@
       },
     };
     const res = await send({ type: 'CAPTURE', payload, site: SITE.id });
-    flashInjectBar(res?.status);
+    flashInjectBar(res?.status, res?.error);
   }
 
   // ----- inject (topic → daemon markdown → composer) ------------------------
@@ -190,6 +192,11 @@
     root = hostEl.attachShadow({ mode: 'open' });
 
     const dotColor = CONNECTED ? '#22c55e' : '#94a3b8';
+    const connectionLabel = CONNECTED
+      ? (MODE === 'cloud' ? 'Awareness 云端记忆已连接' : 'Awareness 本地记忆已连接')
+      : (MODE === 'off' ? '记忆已关闭'
+        : MODE === 'local' ? '未连接本地记忆'
+        : '未连接云端记忆');
     root.innerHTML = `
       <style>
         :host, * { box-sizing: border-box; }
@@ -247,7 +254,7 @@
       </div>
       <div class="aw-bar" hidden>
         <span class="aw-dot"></span>
-        <span class="aw-label">${CONNECTED ? 'Awareness 记忆已连接' : '未连接本地记忆'}</span>
+        <span class="aw-label">${connectionLabel}</span>
         <button class="aw-find">找相关记忆</button>
         <button class="aw-collapse" title="收起">▾</button>
       </div>`;
@@ -294,7 +301,7 @@
     hostEl.style.right = (w < 480 ? 8 : 16) + 'px';
   }
 
-  function flashInjectBar(status) {
+  function flashInjectBar(status, error) {
     if (!root) return;
     const label = root.querySelector('.aw-label');
     if (!label) return;
@@ -302,10 +309,12 @@
       : status === 'skipped' ? '本轮被过滤（噪声）'
       : status === 'queued' ? '已入队，待同步'
       : status === 'duplicate' ? '重复，已跳过'
+      : error === 'reauth_required' ? '授权已失效，请在扩展里重新连接'
+      : error === 'offline' ? '未连接记忆，本轮未记录'
       : label.textContent;
     label.textContent = text;
     // Surface capture feedback: auto-expand so the user (and E2E) can see it.
-    if (status === 'ok' || status === 'queued' || status === 'skipped' || status === 'duplicate') {
+    if (status === 'ok' || status === 'queued' || status === 'skipped' || status === 'duplicate' || error === 'reauth_required') {
       expandBar();
     }
   }

@@ -4,29 +4,56 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="popup.css" />
-  <title>Awareness Memory Bridge</title>
+  <title>Awareness Memory</title>
 </head>
 <body>
-  <header>
+  <header class="top">
     <span class="dot" id="conn-dot"></span>
-    <h1>Awareness 记忆桥</h1>
+    <h1>Awareness Memory</h1>
+    <span class="ver" id="version"></span>
   </header>
 
-  <section id="offline-note" class="note hidden">
-    ○ 未连接本地记忆 · 所有功能静默关闭，不影响当前 AI。请确认 daemon 已启动（端口 37800）。
+  <!-- Cloud: not connected / reauth -->
+  <section id="connect" class="card connect hidden">
+    <p class="pitch">把 ChatGPT、豆包、Kimi、DeepSeek、Gemini 的对话接进你自己的云端记忆。</p>
+    <button id="login" class="primary wide">连接 Awareness</button>
+    <p class="hint" id="login-hint">打开授权页，选一个记忆库即可。无需本地服务。</p>
+    <p class="err hidden" id="login-error"></p>
   </section>
 
-  <section class="binding">
+  <!-- Cloud: connected -->
+  <section id="account" class="card account hidden">
+    <div class="account-row">
+      <div>
+        <div class="account-name" id="memory-name">—</div>
+        <div class="account-sub"><span id="key-prefix">—</span> · 云端记忆</div>
+      </div>
+      <button id="open-panel" class="ghost small">记忆面板</button>
+    </div>
+    <button id="logout" class="link">断开连接</button>
+  </section>
+
+  <section class="modes" id="modes">
+    <button data-mode="cloud" class="mode">云端</button>
+    <button data-mode="local" class="mode">本地</button>
+    <button data-mode="off" class="mode">关闭</button>
+  </section>
+
+  <section id="offline-note" class="note hidden"></section>
+
+  <section class="binding card">
     <label>当前站点</label>
     <div id="site-name" class="value">—</div>
 
-    <label for="workspace">工作区 (workspace)</label>
-    <select id="workspace"><option value="">（使用 daemon 当前项目）</option></select>
+    <div id="local-fields" class="hidden">
+      <label for="workspace">工作区 (workspace)</label>
+      <select id="workspace"><option value="">（使用 daemon 当前项目）</option></select>
 
-    <label for="session">Session</label>
-    <div class="row">
-      <input id="session" type="text" placeholder="ext_… (可留空自动)" />
-      <button id="new-session" class="ghost">新建</button>
+      <label for="session">Session</label>
+      <div class="row">
+        <input id="session" type="text" placeholder="ext_… (可留空自动)" />
+        <button id="new-session" class="ghost">新建</button>
+      </div>
     </div>
 
     <label class="check"><input type="checkbox" id="auto-capture" checked /> 自动记录问答</label>
@@ -51,9 +78,17 @@
 
   <footer>
     <details>
-      <summary>高级：远程规则包 URL</summary>
-      <input id="rulepack-url" type="text" placeholder="留空=官方默认自动热更；或填自定义 JSON URL" />
-      <button id="save-rulepack" class="ghost">保存并刷新</button>
+      <summary>高级设置</summary>
+      <label for="cloud-base">云端地址（默认 awareness.market）</label>
+      <div class="row">
+        <input id="cloud-base" type="text" placeholder="https://awareness.market" />
+        <button id="save-cloud-base" class="ghost">保存</button>
+      </div>
+      <label for="rulepack-url">远程规则包 URL（留空=官方默认热更）</label>
+      <div class="row">
+        <input id="rulepack-url" type="text" placeholder="留空=官方默认" />
+        <button id="save-rulepack" class="ghost">刷新</button>
+      </div>
     </details>
   </footer>
 

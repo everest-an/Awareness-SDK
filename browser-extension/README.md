@@ -1,112 +1,102 @@
-# Awareness Memory Bridge (Browser Extension · MV3)
+# Awareness Memory (Browser Extension · MV3)
 
-Two-way memory bridge for **ChatGPT / Gemini / 豆包 / Kimi / DeepSeek**:
+Two-way memory for **ChatGPT / Gemini / 豆包 / Kimi / DeepSeek**:
 
-- **Auto-capture** — when an AI answer finishes, the Q&A is written to your local
-  Awareness daemon (`source=external_chat`) so any IDE (Claude Code, etc.) can
+- **Auto-capture** — when an AI answer finishes, the Q&A is written to your
+  Awareness memory (`source=external_chat`) so any IDE agent or another chat can
   recall it later.
-- **Manual inject** — pull relevant memories for the current topic and insert
-  them into the chat composer with one click.
+- **One-click recall** — pull relevant memories for the current topic and insert
+  them into the chat composer.
+- **Side panel** — search your cloud memory, browse knowledge cards and timeline.
 
-Part of **F-064 Phase 3**. See `docs/features/f-064/ACCEPTANCE-phase3.md` and
-`docs/features/f-064/phase3-dom-adapters.md`. Changelog: `CHANGELOG.md`.
+Two transports (F-109):
 
-## What it does (for you)
-
-You already chat with 豆包 / DeepSeek / Kimi / ChatGPT / Gemini in the browser.
-This extension gives those chats a **memory that follows you across tools**:
-
-- **Auto-capture** — the moment an AI answer finishes streaming, the Q&A pair is
-  saved to **your own local Awareness memory** (`source=external_chat`). Later,
-  any IDE agent (Claude Code, Cursor, …) or another chat can recall it.
-- **One-click recall** — before you ask, pull the memories relevant to the
-  current topic and drop them straight into the chat box. No copy-paste.
-- **You stay in control** — capture is per-site toggleable, you pick which memory
-  (workspace/session) each site writes to, and everything flows through a daemon
-  on **your machine** (`127.0.0.1:37800`), not a third-party server.
-
-Supported today (real-machine verified): **DeepSeek · ChatGPT · 豆包(Doubao) ·
-Kimi** (`confidence: high`). **Gemini** is wired but pending re-verification
-(`confidence: medium-high`, DOM last checked 2026-05).
-
-## How platform compatibility works (豆包 / Doubao as the example)
-
-The extension does **not** hard-code any site. `content.js` is a generic engine
-driven by a declarative **rule-pack** (`rules/default-rulepack.json`), so adding
-or fixing a platform is a data change, not a code change.
-
-Each site entry describes *how to read and write that platform's DOM*:
-
-| Field | 豆包's value | What it does |
+| Mode | Data path | Setup |
 |---|---|---|
-| `match` | `*://www.doubao.com/*` | which URLs this adapter drives |
-| `selectors` | `turnContainer`, `assistantText`, `userText` … | **fallback chains** (first match wins) that locate each chat turn |
-| `finishSignal` | `selectorGone` on `[data-streaming="true"]` → fallback `mutationQuiescence` 700ms | how we know the answer *finished* (so we don't capture half a reply) |
-| `input` | `textarea` + `nativeValueSetter` + send button | how one-click recall injects text and (optionally) sends |
+| **cloud** (default) | `https://awareness.market/api/v1` | click “连接 Awareness”, OAuth, pick a memory |
+| **local** (optional) | `http://127.0.0.1:37800` | run the Awareness daemon |
 
-**Why 豆包 is the hard case.** Doubao's 2026 rebuild **removed every
-`data-testid`** and switched to hashed CSS-module class names that change on each
-release — anchoring on those would break weekly. So the adapter anchors on the
-**stable `data-*` attributes** verified on the live logged-in DOM:
+Part of **F-109** (cloud) on top of **F-064 Phase 3** (local bridge). See
+`docs/features/f-109-chrome-extension-cloud/` and `docs/features/f-064/`.
 
-- a turn = `[data-message-id]`
-- an **assistant** turn = `[data-message-id]:has(.md-box-root)` (the rendered
-  markdown box only exists on AI replies)
-- a **user** turn = `[data-message-id]:not(:has(.md-box-root))`
+## Install
 
-**When a platform changes its DOM**, we don't ship a new extension. The rule-pack
-is **remote-updatable**: the service worker periodically fetches a newer pack
-(loaded as **inert data only — never eval'd**, an MV3 hard rule) and hot-swaps
-it, falling back to the bundled default if the remote is missing or malformed.
-Each site carries `confidence` + `lastVerified` so drift is visible.
+Chrome Web Store: *(link added after review)*
 
-The same four fields drive all five platforms — 豆包/Kimi/DeepSeek/ChatGPT/Gemini
-differ only in their selector strings and finish-signal, not in any code path.
+Dev / unpacked:
 
-## Architecture — Option C (service worker owns all daemon I/O)
+1. `chrome://extensions` → Developer mode → **Load unpacked** →
+   select this `sdks/browser-extension/` folder.
+2. Pin the extension, open the popup.
+3. Cloud: **连接 Awareness** → sign in → pick a memory.
+   Local: switch the segmented control to **本地** first, then start the daemon
+   (`npx @awareness.market/local start`).
+
+## Architecture — Option C (service worker owns all network I/O)
 
 ```
-content.js  ──sendMessage──▶  sw.js  ──fetch 127.0.0.1:37800──▶  Awareness daemon
-(DOM scrape/inject)          (I/O + token + queue + heartbeat)
+content.js  ──sendMessage──▶  sw.js ── transport.js ──┬─ cloud-client.js ──▶ awareness.market
+(DOM scrape/inject)          (I/O + auth + queue)     └─ daemon-client.js ─▶ 127.0.0.1:37800
 ```
 
-- **content.js** does DOM only. It NEVER fetches the daemon — page CSP
-  (`connect-src`) blocks 127.0.0.1 on strict sites and the page Origin isn't
-  trusted. All daemon calls are relayed to the service worker.
-- **sw.js** owns every `http://127.0.0.1:37800` call off the fixed
-  `chrome-extension://<id>` origin (bypasses CORS via `host_permissions`, exempt
-  from page CSP). It mints + stores the **bridge token**, heartbeats via
-  `chrome.alarms` (min 30s; `setInterval` can't revive a killed SW), retries a
-  durable write queue, and refreshes the remote rule-pack.
-- **Bridge token**: a valid `X-Awareness-Bridge-Token` lets the SW's
-  chrome-extension origin bypass the daemon's site Origin allowlist. Minting is
-  Origin-gated so websites can't steal one.
+- **content.js** does DOM only. It NEVER fetches — page CSP (`connect-src`)
+  blocks loopback on strict sites and the page Origin isn't trusted. All calls
+  are relayed to the service worker.
+- **sw.js** is the single network choke point. It owns the OAuth grant, the
+  retry queue, the heartbeat and the remote rule-pack refresh.
+- **popup** / **sidepanel** are pure UI: they `sendMessage` and render.
+
+### Cloud OAuth (reuses F-084)
+
+1. `POST /register` (RFC 7591, public PKCE client,
+   `client_kind: "browser_extension"`).
+2. `chrome.identity.launchWebAuthFlow()` → the existing
+   `https://awareness.market/authorize` consent page.
+3. The approve endpoint mints a **dedicated, revocable `aw_` key** bound to the
+   memory the user picked.
+4. `POST /token` (code + PKCE verifier) returns the `awmcp_` bearer **and**, for
+   extension clients only, that dedicated `aw_` key + memory id.
+
+Why the extra key: the `awmcp_` bearer is only resolvable inside the MCP
+process; the extension speaks REST. The key is never placed in a URL or a log,
+the popup shows only its first 8 characters, and revoking it in
+Settings → API Keys stops capture within one heartbeat.
 
 ## Rule-pack (remote-updatable, MV3-safe)
 
-Selectors/finish-signals/inject-strategies live in `rules/default-rulepack.json`
-(inert JSON, schema v2). An optional remote URL (set in the popup) hot-swaps a
-newer pack **as data only** — never eval'd, never imported as code (MV3 red
-line). Falls back to the bundled default if the remote is unavailable/malformed.
+Selectors / finish-signals / inject-strategies live in
+`rules/default-rulepack.json` (inert JSON, schema v2). A remote pack hot-swaps
+selectors **as data only** — never eval'd, never imported as code. Each site
+carries `confidence` + `lastVerified`.
 
-Selectors are **fallback chains** (first match wins). Confidence + `lastVerified`
-are per-site; DOM drifts, so re-verify in DevTools before shipping.
+豆包 is anchored on stable `data-message-id` / `.md-box-root` attributes (its
+2026 rebuild removed every `data-testid`), verified on the live logged-in DOM.
 
-## Load unpacked (dev)
+## Tests
 
-1. Start the daemon: `npx @awareness-sdk/local start` (port 37800).
-2. `chrome://extensions` → Developer mode → **Load unpacked** → select this
-   `sdks/browser-extension/` folder.
-3. Open a supported site, pin the extension, open the popup to bind a
-   workspace/session and toggle auto-record.
+```bash
+npm run verify:io        # L1: content script has no fetch; rule-pack inert
+npm run verify:release   # L1: versions/icons/permissions/entry points
+npm test                 # L2/L3: cloud client, PKCE, panel state, chaos, rulepack
+HEADLESS=1 npm run test:e2e   # L4: real Chromium + real HTTP (cloud + local)
+```
 
-## Guards & tests
+The L4 suite has **zero `page.route`**: the cloud spec runs against a real local
+HTTP server, and the local spec against a real daemon.
 
-- **L1** `npm run verify:io` — content script has no daemon fetch; rule-pack is
-  inert; manifest covers all 5 sites.
-- **L2** `node --test test/rulepack-match.test.mjs` — pure rule-pack matching (no
-  browser): the bundled pack resolves all 5 sites + rejects malformed/spoofed.
-- **L4** `npm run test:e2e` — Playwright persistent context (real Chromium + real
-  daemon, zero mock). Specs in `test/e2e/*.spec.mjs`. Headless CI needs the full
-  Chromium (`channel:'chromium'`, new-headless) — MV3 service workers do NOT load
-  under the default headless-shell. Run `npx playwright install chromium` first.
+## Packaging
+
+```bash
+npm run package
+# → dist/awareness-memory-<version>.zip  (manifest + src + rules + icons only)
+```
+
+`scripts/package.mjs` refuses to build if `manifest.json`, `package.json` and
+`CHANGELOG.md` disagree on the version. Store copy and permission
+justifications: `docs/features/f-109-chrome-extension-cloud/STORE-LISTING.md`.
+
+## Privacy
+
+The extension only reads the five supported chat sites, only saves Q&A when an
+answer finishes, and never touches passwords, cookies, other tabs or browsing
+history. Full policy: `https://awareness.market/en/privacy/extension`.

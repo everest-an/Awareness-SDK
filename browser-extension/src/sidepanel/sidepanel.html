@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="sidepanel.css" />
+  <title>Awareness Memory</title>
+</head>
+<body>
+  <header class="top">
+    <span class="dot" id="conn-dot"></span>
+    <div class="brand">
+      <h1>Awareness</h1>
+      <span id="memory-name">记忆面板</span>
+    </div>
+    <button id="refresh" class="icon" title="刷新">⟳</button>
+  </header>
+
+  <section class="search">
+    <input id="query" type="search" placeholder="搜索你的记忆…" autocomplete="off" />
+    <button id="search-btn" class="primary">搜索</button>
+  </section>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="search">搜索</button>
+    <button data-tab="cards" class="active">卡片</button>
+    <button data-tab="timeline">时间线</button>
+  </nav>
+
+  <main id="content">
+    <p class="state" id="state-msg"></p>
+    <ul class="list" id="list"></ul>
+  </main>
+
+  <section class="detail hidden" id="detail">
+    <button id="detail-back" class="back">← 返回</button>
+    <h2 id="detail-title">—</h2>
+    <div class="meta" id="detail-meta"></div>
+    <pre id="detail-body"></pre>
+    <button id="detail-copy" class="ghost">复制内容</button>
+  </section>
+
+  <section class="connect hidden" id="connect">
+    <p>连接 Awareness 后，这里会显示你的知识卡片、时间线和搜索结果。</p>
+    <button id="login" class="primary wide">连接 Awareness</button>
+    <p class="err hidden" id="login-error"></p>
+  </section>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

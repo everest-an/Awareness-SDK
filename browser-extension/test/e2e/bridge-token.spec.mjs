@@ -15,9 +15,10 @@ import {
   startDaemon,
   buildTestExtension,
   launchWithExtension,
+  closeContext,
+  removeDir,
   DAEMON_PORT,
 } from './helpers.mjs';
-import fs from 'node:fs';
 
 let daemon;
 let extPath;
@@ -31,8 +32,8 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  try { await ctx?.context?.close(); } catch { /* ignore */ }
-  try { fs.rmSync(extPath, { recursive: true, force: true }); } catch { /* ignore */ }
+  await closeContext(ctx);
+  removeDir(extPath);
   await daemon?.stop();
 });
 

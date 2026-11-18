@@ -1,10 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "Awareness Memory Bridge",
-  "version": "0.1.0",
-  "description": "Two-way memory bridge for ChatGPT / Gemini / Doubao / Kimi / DeepSeek — auto-capture Q&A into your local Awareness daemon and inject relevant memories back.",
+  "name": "Awareness Memory",
+  "version": "0.3.0",
+  "minimum_chrome_version": "116",
+  "description": "Bring ChatGPT, Doubao, Kimi, DeepSeek and Gemini conversations into your own Awareness memory. Search and recall across tools.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "host_permissions": [
     "http://127.0.0.1:37800/*",
+    "https://awareness.market/*",
     "https://raw.githubusercontent.com/everest-an/Awareness-SDK/*"
   ],
   "background": {
@@ -28,7 +36,14 @@
   ],
   "action": {
     "default_popup": "src/popup/popup.html",
-    "default_title": "Awareness Memory Bridge"
+    "default_title": "Awareness Memory",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
   },
-  "permissions": ["storage", "alarms"]
+  "side_panel": {
+    "default_path": "src/sidepanel/sidepanel.html"
+  },
+  "permissions": ["storage", "alarms", "identity", "sidePanel", "activeTab"]
 }

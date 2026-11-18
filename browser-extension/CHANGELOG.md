@@ -1,8 +1,32 @@
-# Changelog — Awareness Memory Bridge (Browser Extension)
+# Changelog — Awareness Memory (Browser Extension)
 
-All notable changes to the F-064 browser extension. Format: `## [version] — date`,
+All notable changes to the extension. Format: `## [version] — date`,
 grouped Added / Changed / Fixed. User-visible wording (what *you* see), not just
 "fix X".
+
+## [0.3.0] — 2026-11-19 · 云端记忆 + 侧边栏（F-109）
+
+### Added
+- **云端记忆，开箱即用**：安装后点「连接 Awareness」→ 登录并选一个记忆库 →
+  自动捕获与一键召回立即生效。**不再需要本地 daemon**。
+- **侧边栏记忆面板**：在 Chrome 侧边栏里搜索云端记忆、浏览知识卡片和时间线，
+  点开可看全文并复制。
+- **本地模式保留**：已装 daemon 的用户可在弹窗里切到「本地」，行为与 0.2.0
+  完全一致；老用户升级时自动保持本地模式，不会断流。
+- **模式开关**：云端 / 本地 / 关闭，随时可停。
+- **云端地址可改**（高级设置），便于 staging 验证。
+- **商店物料**：16/32/48/128 图标、`npm run package`（同时产出 zip 与可直接 Load unpacked 的目录）、隐私政策页。
+
+### Changed
+- 扩展更名为 **Awareness Memory**（原 Awareness Memory Bridge）。
+- 权限最小化：`storage, alarms, identity, sidePanel, activeTab`；不申请
+  `tabs`，不申请全站访问，只有 5 个受支持的 AI 站点会注入内容脚本。
+- 授权使用 OAuth 2.1 + PKCE（复用云端授权页），扩展拿到的是**本次授权专属、
+  可在设置里单独撤销**的 key；弹窗只显示前 8 位。
+
+### Fixed
+- manifest 版本（0.1.0）与 CHANGELOG（0.2.0）不一致，发布流水线现在会拦截。
+- 未连接时不再静默丢弃对话：云端未登录会入队，授权失效会明确提示重新连接。
 
 ## [0.2.0] — 2026-07-05 · to-C hardening (F-085)
 

@@ -1,9 +1,9 @@
 /**
- * Popup — config panel. Talks to the SW via sendMessage only (no daemon I/O).
- * Shows connection state, binds site↔workspace↔session, filter level, live
- * stats, "record now", and an advanced remote rule-pack URL field.
+ * Popup — account/mode panel. Talks to the SW via sendMessage only (no network).
+ *
+ * Cloud: connect (OAuth), show the granted memory + key prefix, open side panel.
+ * Local: bind site ↔ workspace ↔ session (unchanged F-064 behaviour).
  */
-
 const $ = (id) => document.getElementById(id);
 
 /** Map a hostname to a rule-pack site id (mirrors default-rulepack matches). */
@@ -27,6 +27,7 @@ function send(msg) {
 
 let currentSite = null;
 let currentTabId = null;
+let status = null;
 
 async function init() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -35,61 +36,189 @@ async function init() {
   try { host = new URL(tab.url).host; } catch { /* non-web tab */ }
   currentSite = siteIdFromHost(host);
   $('site-name').textContent = currentSite ? `${currentSite} (${host})` : `不支持的站点 (${host || 'n/a'})`;
+  $('version').textContent = `v${chrome.runtime.getManifest().version}`;
 
   await refreshStatus();
-  await loadWorkspaces();
   await loadBinding();
+  await loadAdvanced();
 
+  $('login').addEventListener('click', login);
+  $('logout').addEventListener('click', logout);
+  $('open-panel').addEventListener('click', openPanel);
   $('save-binding').addEventListener('click', saveBinding);
   $('new-session').addEventListener('click', newSession);
   $('record-now').addEventListener('click', recordNow);
   $('save-rulepack').addEventListener('click', saveRulepack);
+  $('save-cloud-base').addEventListener('click', saveCloudBase);
+  for (const btn of document.querySelectorAll('.mode')) {
+    btn.addEventListener('click', () => switchMode(btn.dataset.mode));
+  }
 }
 
+// ---------------------------------------------------------------------------
+// Status rendering.
+// ---------------------------------------------------------------------------
+
 async function refreshStatus() {
-  const st = await send({ type: 'GET_STATUS' });
-  const connected = !!st?.connected;
-  $('conn-dot').classList.toggle('on', connected);
-  $('offline-note').classList.toggle('hidden', connected);
-  const stats = st?.stats || { recorded: 0, filtered: 0, queued: 0 };
+  status = await send({ type: 'GET_STATUS' });
+  if (!status?.ok) return;
+
+  const dot = $('conn-dot');
+  dot.classList.toggle('on', !!status.connected);
+  dot.classList.toggle('warn', status.state === 'reauth');
+
+  const isCloud = status.mode === 'cloud';
+  const isLocal = status.mode === 'local';
+  const account = status.account;
+
+  for (const btn of document.querySelectorAll('.mode')) {
+    btn.classList.toggle('active', btn.dataset.mode === status.mode);
+  }
+
+  const needConnect = isCloud && (!account || status.state === 'reauth');
+  $('connect').classList.toggle('hidden', !needConnect);
+  $('account').classList.toggle('hidden', !(isCloud && account && status.state !== 'reauth'));
+  $('local-fields').classList.toggle('hidden', !isLocal);
+
+  if (needConnect) {
+    const err = $('login-error');
+    if (status.state === 'reauth') {
+      err.textContent = '授权已失效（可能已在设置里撤销）。请重新连接。';
+      err.classList.remove('hidden');
+    } else {
+      err.classList.add('hidden');
+    }
+    $('login').textContent = status.state === 'reauth' ? '重新连接' : '连接 Awareness';
+  }
+
+  if (account) {
+    $('memory-name').textContent = account.memoryName || account.memoryId;
+    $('key-prefix').textContent = `${account.keyPrefix || 'aw_…'}…`;
+  }
+
+  const note = $('offline-note');
+  let noteText = '';
+  if (status.mode === 'off') {
+    noteText = '已关闭：不采集、不注入。随时切回云端或本地。';
+  } else if (isLocal && !status.connected) {
+    noteText = '未连接本地记忆。请先启动 daemon：npx @awareness.market/local start（端口 37800）。';
+  } else if (isCloud && status.state === 'reauth') {
+    noteText = '';
+  }
+  note.textContent = noteText;
+  note.classList.toggle('hidden', !noteText);
+
+  const stats = status.stats || { recorded: 0, filtered: 0, queued: 0 };
   $('stat-recorded').textContent = stats.recorded ?? 0;
   $('stat-filtered').textContent = stats.filtered ?? 0;
   $('stat-queued').textContent = stats.queued ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// Cloud auth.
+// ---------------------------------------------------------------------------
+
+async function login() {
+  const btn = $('login');
+  btn.disabled = true;
+  btn.textContent = '正在打开授权页…';
+  $('login-error').classList.add('hidden');
+
+  const res = await send({ type: 'LOGIN' });
+  btn.disabled = false;
+
+  if (!res?.ok) {
+    $('login').textContent = '重新连接';
+    $('login-error').textContent = loginErrorText(res?.error, res?.detail);
+    $('login-error').classList.remove('hidden');
+    return;
+  }
+  await refreshStatus();
+  await loadBinding();
+}
+
+function loginErrorText(code, detail) {
+  switch (code) {
+    case 'auth_cancelled': return '已取消授权。';
+    case 'state_mismatch': return '授权校验失败（state 不匹配），请重试。';
+    case 'not_extension_client': return '服务器还不支持扩展授权，请稍后再试或改用本地模式。';
+    case 'registration_failed': return '无法注册扩展客户端，请检查网络后重试。';
+    case 'token_failed': return '换取凭证失败，请重试。';
+    default: return `连接失败：${code || 'unknown'}${detail ? ` (${detail})` : ''}`;
+  }
+}
+
+async function logout() {
+  await send({ type: 'LOGOUT' });
+  await refreshStatus();
+}
+
+async function openPanel() {
+  try {
+    // Call open() directly in the click handler (no await before it) so the
+    // user gesture is still valid; WINDOW_ID_CURRENT avoids a windows.getCurrent
+    // round-trip that can consume the gesture.
+    await chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+    window.close();
+  } catch {
+    // Older Chrome or a blocked side panel: fall back to the web app.
+    chrome.tabs.create({ url: status?.cloudBase || 'https://awareness.market' });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mode.
+// ---------------------------------------------------------------------------
+
+async function switchMode(mode) {
+  const res = await send({ type: 'SET_MODE', mode });
+  if (!res?.ok) return;
+  await refreshStatus();
+  await loadBinding();
+}
+
+// ---------------------------------------------------------------------------
+// Site binding.
+// ---------------------------------------------------------------------------
+
+async function loadBinding() {
+  if (!currentSite) return;
+  const res = await send({ type: 'GET_BINDING', site: currentSite });
+  const b = res?.binding || {};
+  $('auto-capture').checked = b.autoCapture !== false;
+  if (b.filterLevel) $('filter').value = b.filterLevel;
+  if (b.session_id) $('session').value = b.session_id;
+  if (status?.mode === 'local') await loadWorkspaces();
 }
 
 async function loadWorkspaces() {
   const res = await send({ type: 'LIST_WORKSPACES' });
   if (!res?.ok || !res.workspaces) return;
   const sel = $('workspace');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">（使用 daemon 当前项目）</option>';
   // /workspaces returns a path-keyed map { "C:\\...": {lastUsed,...} }.
-  const paths = Object.keys(res.workspaces);
-  for (const p of paths) {
+  for (const p of Object.keys(res.workspaces)) {
     const opt = document.createElement('option');
     opt.value = p; opt.textContent = p;
     sel.appendChild(opt);
   }
-}
-
-async function loadBinding() {
-  if (!currentSite) return;
-  const res = await send({ type: 'GET_BINDING', site: currentSite });
-  const b = res?.binding || {};
-  if (b.workspace) $('workspace').value = b.workspace;
-  if (b.session_id) $('session').value = b.session_id;
-  $('auto-capture').checked = b.autoCapture !== false;
-  if (b.filterLevel) $('filter').value = b.filterLevel;
+  sel.value = current;
 }
 
 async function saveBinding() {
   if (!currentSite) return;
+  const res = await send({ type: 'GET_BINDING', site: currentSite });
+  const existing = res?.binding || {};
   const binding = {
-    workspace: $('workspace').value || null,
-    session_id: $('session').value.trim() || null,
+    ...existing,
+    workspace: status?.mode === 'local' ? ($('workspace').value || null) : existing.workspace,
+    session_id: status?.mode === 'local' ? ($('session').value.trim() || null) : existing.session_id,
     autoCapture: $('auto-capture').checked,
     filterLevel: $('filter').value,
   };
-  const res = await send({ type: 'SET_BINDING', site: currentSite, binding });
-  $('save-binding').textContent = res?.ok ? '已保存 ✓' : '保存失败';
+  const saved = await send({ type: 'SET_BINDING', site: currentSite, binding });
+  $('save-binding').textContent = saved?.ok ? '已保存 ✓' : '保存失败';
   setTimeout(() => { $('save-binding').textContent = '保存绑定'; }, 1500);
 }
 
@@ -103,7 +232,7 @@ async function newSession() {
   if (res?.ok && res.session?.id) {
     $('session').value = res.session.id;
   } else {
-    $('new-session').textContent = '失败';
+    $('new-session').textContent = '仅本地模式';
     setTimeout(() => { $('new-session').textContent = '新建'; }, 1500);
   }
 }
@@ -111,17 +240,34 @@ async function newSession() {
 async function recordNow() {
   if (currentTabId == null) return;
   chrome.tabs.sendMessage(currentTabId, { type: 'MANUAL_CAPTURE' }, () => {
-    // ignore lastError (tab may not have content script)
     void chrome.runtime.lastError;
     setTimeout(refreshStatus, 800);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Advanced.
+// ---------------------------------------------------------------------------
+
+async function loadAdvanced() {
+  const got = await chrome.storage.local.get(['rulepack_url', 'cloud_base']);
+  $('rulepack-url').value = got.rulepack_url || '';
+  $('cloud-base').value = got.cloud_base || 'https://awareness.market';
 }
 
 async function saveRulepack() {
   const url = $('rulepack-url').value.trim();
   const res = await send({ type: 'SET_RULEPACK_URL', url });
   $('save-rulepack').textContent = res?.refresh?.updated ? '已更新 ✓' : '已保存';
-  setTimeout(() => { $('save-rulepack').textContent = '保存并刷新'; }, 1500);
+  setTimeout(() => { $('save-rulepack').textContent = '刷新'; }, 1500);
+}
+
+async function saveCloudBase() {
+  const base = $('cloud-base').value.trim() || 'https://awareness.market';
+  const res = await send({ type: 'SET_CLOUD_BASE', base });
+  $('save-cloud-base').textContent = res?.ok ? '已保存 ✓' : '保存失败';
+  setTimeout(() => { $('save-cloud-base').textContent = '保存'; }, 1500);
+  await refreshStatus();
 }
 
 init();

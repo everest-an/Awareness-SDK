@@ -23,9 +23,10 @@ import {
   buildTestExtension,
   startFixtureServer,
   launchWithExtension,
+  closeContext,
+  removeDir,
   DAEMON_PORT,
 } from './helpers.mjs';
-import fs from 'node:fs';
 
 const QUESTION = 'How should I store external-chat captures so they survive workspace switches?';
 const BASE = `http://127.0.0.1:${DAEMON_PORT}/api/v1`;
@@ -52,8 +53,8 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  try { await ctx?.context?.close(); } catch { /* ignore */ }
-  try { fs.rmSync(extPath, { recursive: true, force: true }); } catch { /* ignore */ }
+  await closeContext(ctx);
+  removeDir(extPath);
   await fixture?.stop();
   await daemon?.stop();
 });

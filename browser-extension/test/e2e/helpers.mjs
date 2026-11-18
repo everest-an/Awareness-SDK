@@ -7,7 +7,7 @@
  * Chromium persistent context with the extension loaded.
  */
 import { chromium } from '@playwright/test';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -69,6 +69,9 @@ export function buildTestExtension(fixtureOrigin) {
   const fixtureGlob = `${fixtureOrigin}/*`;
   manifest.content_scripts[0].matches.push(fixtureGlob);
   manifest.host_permissions.push(`http://127.0.0.1:${DAEMON_PORT}/*`);
+  // The same origin also stands in for the cloud REST host in F-109 specs, so
+  // the service worker needs host permission to fetch it.
+  manifest.host_permissions.push(fixtureGlob);
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
   // Patch rule-pack: add the fixture origin glob to the deepseek entry.
@@ -106,7 +109,7 @@ export async function startFixtureServer() {
 }
 
 /** Launch a persistent context with the extension loaded; return {context, extensionId}. */
-export async function launchWithExtension(extPath) {
+export async function launchWithExtension(extPath, { mode = 'local' } = {}) {
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'awareness-ext-profile-'));
   const headless = process.env.HEADLESS === '1';
   // MV3 extensions (service workers) do NOT load under Playwright's default
@@ -127,5 +130,89 @@ export async function launchWithExtension(extPath) {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 15_000 });
   const extensionId = new URL(sw.url()).host;
+
+  // F-109 installs default to cloud. The F-064 E2E suite exercises the local
+  // daemon chain, so drive the real SET_MODE message from an extension page
+  // (not storage poking) — this also covers the mode-switch path itself.
+  if (mode) await setMode(context, extensionId, mode);
   return { context, extensionId, userDataDir };
+}
+
+/**
+ * Close a persistent context with a bound, then hard-kill the browser if the
+ * graceful close hung (Windows occasionally leaves the extension SW holding a
+ * profile lock). A hung afterAll must not fail an otherwise-green suite.
+ */
+export async function closeContext(target, timeoutMs = 10_000) {
+  const context = target?.context || target;
+  const userDataDir = target?.userDataDir;
+  if (!context) return;
+
+  let hung = false;
+  let timer;
+  try {
+    await Promise.race([
+      context.close().catch(() => {}),
+      new Promise((resolve) => {
+        timer = setTimeout(() => { hung = true; resolve(); }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+
+  if (hung && userDataDir) killBrowserForProfile(userDataDir);
+}
+
+/** Last-resort cleanup: kill the browser process launched with this profile. */
+function killBrowserForProfile(userDataDir) {
+  try {
+    if (process.platform === 'win32') {
+      const escaped = String(userDataDir).replace(/'/g, "''");
+      const script = [
+        "$p = Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\"",
+        `| Where-Object { $_.CommandLine -like '*--user-data-dir=${escaped}*' }`,
+        "| Select-Object -First 1",
+        "; if ($p) { taskkill /F /T /PID $p.ProcessId }",
+      ].join(' ');
+      execFileSync('powershell.exe', ['-NoProfile', '-Command', script], {
+        stdio: 'ignore',
+        timeout: 15_000,
+      });
+    } else {
+      execFileSync('pkill', ['-f', `--user-data-dir=${userDataDir}`], { stdio: 'ignore' });
+    }
+  } catch { /* best-effort */ }
+}
+
+/** Zero out a temp extension build without letting EBUSY fail the suite. */
+export function removeDir(dir) {
+  try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* Windows lock */ }
+}
+
+/** Switch the extension's transport via its public message API. */
+export async function setMode(context, extensionId, mode) {
+  const page = await context.newPage();
+  try {
+    await page.goto(`chrome-extension://${extensionId}/src/popup/popup.html`);
+    const res = await page.evaluate(
+      (m) => new Promise((resolve) => chrome.runtime.sendMessage({ type: 'SET_MODE', mode: m }, resolve)),
+      mode
+    );
+    if (!res?.ok) throw new Error(`SET_MODE ${mode} failed: ${JSON.stringify(res)}`);
+
+    // onInstalled's bootstrap may still be in flight and can overwrite the
+    // connected flag; wait for the mode's own heartbeat to settle.
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      const status = await page.evaluate(
+        () => new Promise((resolve) => chrome.runtime.sendMessage({ type: 'GET_STATUS' }, resolve))
+      );
+      if (status?.mode === mode && (mode === 'off' || status.connected)) return;
+      await page.waitForTimeout(200);
+    }
+    if (mode === 'local') throw new Error('SET_MODE local did not reach the daemon within 10s');
+  } finally {
+    await page.close();
+  }
 }
