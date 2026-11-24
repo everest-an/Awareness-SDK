@@ -48,6 +48,41 @@
   const textOf = (el) => (el ? (el.innerText || el.textContent || '').trim() : '');
   const hashSig = (s) => { let h = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; } return String(h); };
 
+  /**
+   * Composer candidates, in priority order.
+   *
+   * Sites rebuild their composer without warning: Doubao swapped its <textarea>
+   * for a contenteditable rich editor in 2026, which used to leave the pill
+   * unmounted (the old single selector never matched) — the extension looked
+   * dead on that site. Each candidate carries its own inject strategy because a
+   * textarea needs the native value setter while a contenteditable needs
+   * execCommand('insertText').
+   */
+  function inputCandidates() {
+    const input = SITE?.input || {};
+    const out = [];
+    if (typeof input.selector === 'string' && input.selector) {
+      out.push({ selector: input.selector, strategy: input.injectStrategy });
+    }
+    for (const fb of (Array.isArray(input.fallbacks) ? input.fallbacks : [])) {
+      if (typeof fb === 'string' && fb) {
+        out.push({ selector: fb, strategy: input.injectStrategy });
+      } else if (fb && typeof fb.selector === 'string' && fb.selector) {
+        out.push({ selector: fb.selector, strategy: fb.injectStrategy || input.injectStrategy });
+      }
+    }
+    return out;
+  }
+
+  /** First candidate that exists on the page → { el, strategy } | null. */
+  function resolveInput() {
+    for (const candidate of inputCandidates()) {
+      const el = qFirst([candidate.selector]);
+      if (el) return { el, strategy: candidate.strategy };
+    }
+    return null;
+  }
+
   // ----- bootstrap ----------------------------------------------------------
 
   async function boot() {
@@ -180,8 +215,8 @@
    */
   function mountInjectBar() {
     if (hostEl && document.getElementById(ID)) return;
-    const input = qFirst([SITE.input.selector]);
-    if (!input) { setTimeout(mountInjectBar, 1500); return; }
+    const resolved = resolveInput();
+    if (!resolved) { setTimeout(mountInjectBar, 1500); return; }
 
     hostEl = document.createElement('div');
     hostEl.id = ID;
@@ -320,8 +355,8 @@
   }
 
   async function onFindMemories() {
-    const input = qFirst([SITE.input.selector]);
-    const topic = input ? (input.value || input.innerText || document.title) : document.title;
+    const resolved = resolveInput();
+    const topic = resolved?.el ? (resolved.el.value || resolved.el.innerText || document.title) : document.title;
     const res = await send({ type: 'INJECT', q: topic, site: SITE.id });
     if (!res?.ok) { flashInjectBar(); return; }
     if (!res.markdown || !res.card_count) {
@@ -348,9 +383,10 @@
   }
 
   function injectIntoComposer(text) {
-    const input = qFirst([SITE.input.selector]);
-    if (!input) return;
-    const strategy = SITE.input.injectStrategy;
+    const resolved = resolveInput();
+    if (!resolved) return;
+    const input = resolved.el;
+    const strategy = resolved.strategy;
     input.focus();
     if (strategy === 'nativeValueSetter') {
       const proto = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;

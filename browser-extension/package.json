@@ -1,6 +1,6 @@
 {
   "name": "@awareness-sdk/browser-extension",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Awareness Memory — MV3 extension that captures ChatGPT/Gemini/Doubao/Kimi/DeepSeek Q&A into your cloud (or local) Awareness memory and recalls it across tools.",
   "type": "module",
@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "icons": "node scripts/make-icons.mjs",
     "package": "node scripts/package.mjs",
+    "probe:rulepack": "node scripts/probe-rulepack.mjs",
     "capture:store": "node scripts/capture-store-assets.mjs"
   },
   "devDependencies": {

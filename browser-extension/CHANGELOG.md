@@ -4,6 +4,19 @@ All notable changes to the extension. Format: `## [version] — date`,
 grouped Added / Changed / Fixed. User-visible wording (what *you* see), not just
 "fix X".
 
+## [0.3.1] — 2026-11-24 · 豆包输入框修复 + 授权不再卡死
+
+### Fixed
+- **豆包上用不了的问题**：豆包把输入框从 `<textarea>` 换成了富文本编辑器，
+  旧规则匹配不到输入框，悬浮胶囊根本不会出现。现在输入框支持「候选链」：
+  先试 textarea，找不到就自动退回 contenteditable，胶囊和「注入记忆」恢复。
+- **新账号授权卡死**：授权页在账号没有记忆库时只显示一行灰字，授权按钮永远
+  点不了。现在会直接给出「创建记忆库并继续」，建完自动选中即可授权。
+
+### Added
+- `npm run probe:rulepack`：对线上 5 个站点跑一次选择器体检，站点改版当天
+  就能发现「输入框/消息节点匹配不到」。
+
 ## [0.3.0] — 2026-11-19 · 云端记忆 + 侧边栏（F-109）
 
 ### Added

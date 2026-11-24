@@ -87,7 +87,7 @@
     {
       "id": "doubao",
       "match": ["*://www.doubao.com/*"],
-      "_note": "Doubao 2026 rebuild removed ALL data-testid + uses hashed CSS-module classes (unstable). Anchored on stable data-* attributes verified on the live logged-in DOM (2026-07-03).",
+      "_note": "Doubao 2026 rebuild removed ALL data-testid + uses hashed CSS-module classes (unstable). Anchored on stable data-* attributes verified on the live logged-in DOM (2026-07-03). 2026-11-24: the composer is now a contenteditable rich editor (0 <textarea> on /chat/), so a fallback chain is required — see input.fallbacks.",
       "selectors": {
         "turnContainer": ["[data-message-id]", "[data-container-type=\"block-v2\"]"],
         "message": ["[data-message-id]"],
@@ -105,11 +105,15 @@
         "kind": "textarea",
         "selector": "div#root textarea",
         "injectStrategy": "nativeValueSetter",
+        "fallbacks": [
+          { "selector": "div#root div[contenteditable=\"true\"]", "kind": "contenteditable", "injectStrategy": "execCommandInsertText" },
+          { "selector": "div[contenteditable=\"true\"]", "kind": "contenteditable", "injectStrategy": "execCommandInsertText" }
+        ],
         "sendButton": ["button[type=\"submit\"]", "[data-testid=\"send_button\"]"]
       },
       "observeRoot": ["div#root", "body"],
       "confidence": "high",
-      "lastVerified": "2026-07"
+      "lastVerified": "2026-11"
     },
     {
       "id": "kimi",
