@@ -39,6 +39,16 @@
     <button data-mode="off" class="mode">关闭</button>
   </section>
 
+  <!-- F-111: save the page you are reading (cloud only) -->
+  <section id="page-save" class="card page-save hidden">
+    <label>网页记忆</label>
+    <div id="page-site" class="value">—</div>
+    <button id="save-page" class="primary wide">保存当前页到记忆</button>
+    <label class="check"><input type="checkbox" id="page-longterm" /> 在此站点常驻保存图标</label>
+    <p class="hint" id="page-hint">只在你点「保存」时读取正文；不会后台记录浏览。</p>
+    <p class="err hidden" id="page-status"></p>
+  </section>
+
   <section id="offline-note" class="note hidden"></section>
 
   <section class="binding card">

@@ -53,8 +53,9 @@ test('packaged manifest is minimal and versioned', async () => {
 
   expect(manifest.version).toBe(version);
   expect(manifest.permissions.sort()).toEqual(
-    ['activeTab', 'alarms', 'identity', 'sidePanel', 'storage'].sort()
+    ['activeTab', 'alarms', 'identity', 'scripting', 'sidePanel', 'storage'].sort()
   );
+  expect(manifest.optional_host_permissions).toEqual(['*://*/*']);
   expect(manifest.host_permissions.join(' ')).toContain('https://awareness.market/*');
   expect(manifest.host_permissions.join(' ')).toContain('http://127.0.0.1:37800/*');
   expect(manifest.side_panel.default_path).toBe('src/sidepanel/sidepanel.html');

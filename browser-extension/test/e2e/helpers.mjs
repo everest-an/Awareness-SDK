@@ -123,6 +123,8 @@ export async function launchWithExtension(extPath, { mode = 'local' } = {}) {
     args: [
       `--disable-extensions-except=${extPath}`,
       `--load-extension=${extPath}`,
+      // Chrome 137+ ignores --load-extension unless this feature is disabled.
+      '--disable-features=DisableLoadExtensionCommandLineSwitch',
     ],
   });
 

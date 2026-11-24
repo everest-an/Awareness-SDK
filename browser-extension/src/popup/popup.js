@@ -27,11 +27,13 @@ function send(msg) {
 
 let currentSite = null;
 let currentTabId = null;
+let currentTabUrl = '';
 let status = null;
 
 async function init() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   currentTabId = tab?.id ?? null;
+  currentTabUrl = tab?.url ?? '';
   let host = '';
   try { host = new URL(tab.url).host; } catch { /* non-web tab */ }
   currentSite = siteIdFromHost(host);
@@ -48,6 +50,8 @@ async function init() {
   $('save-binding').addEventListener('click', saveBinding);
   $('new-session').addEventListener('click', newSession);
   $('record-now').addEventListener('click', recordNow);
+  $('save-page').addEventListener('click', savePageNow);
+  $('page-longterm').addEventListener('change', togglePageLongterm);
   $('save-rulepack').addEventListener('click', saveRulepack);
   $('save-cloud-base').addEventListener('click', saveCloudBase);
   for (const btn of document.querySelectorAll('.mode')) {
@@ -112,6 +116,110 @@ async function refreshStatus() {
   $('stat-recorded').textContent = stats.recorded ?? 0;
   $('stat-filtered').textContent = stats.filtered ?? 0;
   $('stat-queued').textContent = stats.queued ?? 0;
+
+  await refreshPageSave();
+}
+
+// ---------------------------------------------------------------------------
+// F-111 · save the page you are reading.
+// ---------------------------------------------------------------------------
+
+function originOf(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.origin : '';
+  } catch {
+    return '';
+  }
+}
+
+function pageFlash(text, isError = false) {
+  const el = $('page-status');
+  el.textContent = text;
+  el.classList.toggle('err', isError);
+  el.classList.remove('hidden');
+}
+
+/** Show the page-save card only for a connected cloud account on a web page. */
+async function refreshPageSave() {
+  const box = $('page-save');
+  const connected = status?.ok
+    && status.mode === 'cloud'
+    && status.connected
+    && !!status.account
+    && status.state !== 'reauth';
+  const origin = originOf(currentTabUrl);
+  if (!connected || !origin) {
+    box.classList.add('hidden');
+    return;
+  }
+  box.classList.remove('hidden');
+  $('page-site').textContent = origin.replace(/^https?:\/\//, '');
+  const res = await send({ type: 'GET_PAGE_SITES' });
+  $('page-longterm').checked = Array.isArray(res?.origins) && res.origins.includes(origin);
+}
+
+async function savePageNow() {
+  const btn = $('save-page');
+  const statusEl = $('page-status');
+  btn.disabled = true;
+  btn.textContent = '保存中…';
+  statusEl.classList.add('hidden');
+
+  const res = await send({ type: 'SAVE_PAGE_ACTIVE' });
+  btn.disabled = false;
+  btn.textContent = '保存当前页到记忆';
+
+  if (res?.ok) {
+    pageFlash(
+      res.status === 'duplicate'
+        ? '这一页已经在记忆里了'
+        : `已保存${res.chars ? ` · ${res.chars} 字` : ''}`,
+    );
+    setTimeout(() => statusEl.classList.add('hidden'), 3000);
+  } else if (res?.error === 'cannot_read_page') {
+    pageFlash('无法读取此页（浏览器内部页、商店页不支持）', true);
+  } else if (res?.error === 'not_connected' || res?.reauthRequired) {
+    pageFlash('未连接或授权已失效，请重新连接', true);
+  } else {
+    pageFlash('保存失败，请稍后重试', true);
+  }
+}
+
+/**
+ * Long-term icon for this site. The host permission MUST be requested inside the
+ * user gesture, so this runs directly in the change handler (no await before
+ * chrome.permissions.request).
+ */
+async function togglePageLongterm(event) {
+  const want = event.target.checked;
+  const origin = originOf(currentTabUrl);
+  if (!origin) return;
+
+  if (want) {
+    let granted = false;
+    try {
+      granted = await chrome.permissions.request({ origins: [`${origin}/*`] });
+    } catch {
+      granted = false;
+    }
+    if (!granted) {
+      event.target.checked = false;
+      pageFlash('需要站点权限才能在页面上显示图标', true);
+      return;
+    }
+    const res = await send({ type: 'PAGE_SITE_ENABLE', origin });
+    if (!res?.ok) {
+      event.target.checked = false;
+      pageFlash('开启失败，请重试', true);
+      return;
+    }
+    pageFlash('已开启：本页右下角出现保存图标');
+  } else {
+    await send({ type: 'PAGE_SITE_DISABLE', origin });
+    try { await chrome.permissions.remove({ origins: [`${origin}/*`] }); } catch { /* already gone */ }
+    pageFlash('已关闭此站点的常驻图标');
+  }
 }
 
 // ---------------------------------------------------------------------------

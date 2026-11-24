@@ -4,6 +4,25 @@ All notable changes to the extension. Format: `## [version] — date`,
 grouped Added / Changed / Fixed. User-visible wording (what *you* see), not just
 "fix X".
 
+## [0.4.0] — 2026-11-24 · 网页记忆（保存你正在看的页面）
+
+### Added
+- **保存当前页到记忆**：弹窗新增「网页记忆」区块，一键把正在读的页面正文
+  （标题 + URL + 正文，最多 2 万字）写进你授权的记忆库。
+- **页面右下角保存图标**：在弹窗里对某个站点打开「常驻保存图标」后，该站点
+  每页右下角都会出现一个小图标；点开先看预览，再决定保存。**默认关闭，
+  按站点授权。**
+- 保存内容带 `source=web_page` 标记和原始 URL，召回时能和 AI 对话区分开。
+
+### Changed
+- 权限新增 `scripting`；站点访问走 **optional_host_permissions**，安装时
+  仍然不申请 `<all_urls>`，只有你主动为某个站点打开图标时才向浏览器请求
+  该站点权限，关闭即撤销。
+
+### Not done（明确不做）
+- 不读浏览历史、不后台记录、不自动保存任何页面、不截图、不读 Cookie/表单。
+- 保存动作永远是用户点击触发。
+
 ## [0.3.1] — 2026-11-24 · 豆包输入框修复 + 授权不再卡死
 
 ### Fixed

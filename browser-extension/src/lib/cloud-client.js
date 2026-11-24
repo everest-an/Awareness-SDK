@@ -11,6 +11,7 @@
  */
 import { STORAGE, cloudPaths } from './config.js';
 import { getAuth, getCloudBase, markReauthRequired } from './auth.js';
+import { buildPageContent } from './page-extract.js';
 
 const TIMEOUT_MS = 12000;
 
@@ -158,6 +159,42 @@ export async function recordCapture(input) {
   // The content script speaks the transport-neutral vocabulary (`ok` / ...).
   const status = rawStatus === 'success' || rawStatus === 'queued' || !rawStatus ? 'ok' : rawStatus;
   return result(true, { status, id: res.data?.id, messageId });
+}
+
+// ---------------------------------------------------------------------------
+// Web page capture (F-111).
+// ---------------------------------------------------------------------------
+
+/**
+ * Save one page the user explicitly chose. Uses the same content endpoint as
+ * chat capture, tagged so recall can tell a page from a conversation.
+ *
+ * @param {{url:string, title:string, text:string}} page
+ */
+export async function recordPage(page) {
+  const auth = await getAuth();
+  if (!auth) return result(false, { error: 'not_connected', retryable: false });
+
+  const url = String(page?.url || '');
+  const title = String(page?.title || '').slice(0, 200);
+  const text = String(page?.text || '');
+  if (!text.trim()) return result(false, { error: 'empty_page', retryable: false });
+
+  const content = buildPageContent({ title, url, text });
+  const messageId = await messageIdFor(auth.memoryId, content);
+  const base = await getCloudBase();
+  const res = await request(cloudPaths(base).content(auth.memoryId), {
+    method: 'POST',
+    body: {
+      content,
+      async_vectorize: true,
+      message_id: messageId,
+      kwargs: { source: 'web_page', url, title },
+    },
+  });
+  if (!res.ok) return res;
+  if (res.data?.duplicate) return result(true, { status: 'duplicate' });
+  return result(true, { status: 'ok', id: res.data?.id, messageId });
 }
 
 // ---------------------------------------------------------------------------

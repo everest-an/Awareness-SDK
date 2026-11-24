@@ -114,7 +114,34 @@ export const STORAGE = {
   cloudAuth: 'cloud_auth',   // { apiKey, memoryId, memoryName, keyPrefix, connectedAt }
   cloudClient: 'cloud_client', // { [base]: { client_id, redirect_uri } }
   cloudReauth: 'cloud_reauth_required',
+  // web page capture (F-111): origins where the user enabled the long-term icon
+  pageSites: 'page_sites',   // string[] e.g. ['https://example.com']
 };
+
+// ---------------------------------------------------------------------------
+// Web page capture (F-111).
+// ---------------------------------------------------------------------------
+export const PAGE_SCRIPT_ID_PREFIX = 'aw-page-';
+export const PAGE_CONTENT_SCRIPT = 'src/page-saver.js';
+export const PAGE_SITES = STORAGE.pageSites;
+
+/** Stable id for the per-origin registered content script (Chrome requires [a-z0-9_]). */
+export function pageScriptId(origin) {
+  let h = 0;
+  for (let i = 0; i < origin.length; i++) h = (h * 31 + origin.charCodeAt(i)) | 0;
+  return `${PAGE_SCRIPT_ID_PREFIX}${Math.abs(h).toString(36)}`;
+}
+
+/** Origin of a URL, or '' for non-http(s) pages (chrome://, file://, web store). */
+export function pageOrigin(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+    return u.origin;
+  } catch {
+    return '';
+  }
+}
 
 // chrome.alarms names.
 export const ALARM = {

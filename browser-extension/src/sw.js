@@ -26,6 +26,8 @@ import {
 import * as cloud from './lib/cloud-client.js';
 import { getActiveRulepack, refreshRemoteRulepack } from './lib/rulepack.js';
 import { enqueue, getQueue, setQueue, queueSize } from './lib/queue.js';
+import { extractPageText } from './lib/page-extract.js';
+import { PAGE_SITES, PAGE_CONTENT_SCRIPT, pageScriptId, pageOrigin } from './lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Lifecycle: install / startup → set alarms, migrate mode, warm state.
@@ -41,6 +43,7 @@ const READY = (async () => {
   await migrateMode();
   await ensureStats();
   await refreshConnection();
+  await restorePageScripts();
 })();
 
 chrome.runtime.onInstalled.addListener(async () => { await READY; });
@@ -145,15 +148,15 @@ async function drainQueue() {
 // Message hub (content script + popup + side panel).
 // ---------------------------------------------------------------------------
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // Return true to keep the channel open for the async response.
-  handleMessage(msg).then(sendResponse).catch((err) => {
+  handleMessage(msg, sender).then(sendResponse).catch((err) => {
     sendResponse({ ok: false, error: String(err?.message || err) });
   });
   return true;
 });
 
-async function handleMessage(msg) {
+async function handleMessage(msg, sender) {
   await READY;
   switch (msg?.type) {
     case 'GET_BOOTSTRAP':        return getBootstrapForSite(msg.url);
@@ -173,7 +176,125 @@ async function handleMessage(msg) {
     case 'CLOUD_CARDS':          return cloud.knowledgeCards(msg);
     case 'CLOUD_TIMELINE':       return cloud.timeline(msg);
     case 'CLOUD_SEARCH':         return cloud.search(msg.query, msg);
+    case 'SAVE_PAGE_ACTIVE':     return saveActiveTabPage();
+    case 'SAVE_PAGE_FROM_PAGE':  return savePageFromSender(msg, sender);
+    case 'PAGE_SITE_ENABLE':     return enablePageSite(msg.origin);
+    case 'PAGE_SITE_DISABLE':    return disablePageSite(msg.origin);
+    case 'GET_PAGE_SITES':       return { ok: true, origins: await getPageSites() };
     default:                     return { ok: false, error: 'unknown_message' };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Web page capture (F-111): explicit, per page, never on page load.
+// ---------------------------------------------------------------------------
+
+async function getPageSites() {
+  const got = await chrome.storage.local.get([PAGE_SITES]);
+  return Array.isArray(got[PAGE_SITES]) ? got[PAGE_SITES] : [];
+}
+
+async function setPageSites(origins) {
+  await chrome.storage.local.set({ [PAGE_SITES]: [...new Set(origins)].filter(Boolean) });
+}
+
+/** Extract the active tab (the toolbar click granted activeTab) and save it. */
+async function saveActiveTabPage() {
+  let tab = null;
+  try { [tab] = await chrome.tabs.query({ active: true, currentWindow: true }); } catch { /* no tabs */ }
+  if (!tab?.id) return { ok: false, error: 'no_active_tab' };
+  return extractAndSave(tab.id);
+}
+
+/** Content-script path: the sender tab is the page the user clicked on. */
+async function savePageFromSender(msg, sender) {
+  const tabId = sender?.tab?.id;
+  if (!tabId) return { ok: false, error: 'no_sender_tab' };
+  return extractAndSave(tabId);
+}
+
+async function extractAndSave(tabId) {
+  let page = null;
+  try {
+    const [injection] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: extractPageText,
+    });
+    page = injection?.result || null;
+  } catch {
+    return { ok: false, error: 'cannot_read_page' };
+  }
+  if (!page?.text) return { ok: false, error: 'empty_page' };
+
+  const res = await cloud.recordPage(page);
+  if (!res.ok) return res;
+  await bumpStat('recorded');
+  return { ok: true, title: page.title, chars: page.text.length, status: res.status };
+}
+
+/**
+ * Long-term icon for one origin. The host permission itself is requested by the
+ * popup (chrome.permissions.request needs a user gesture); by the time we get
+ * here the origin is already granted, so this only registers the content script.
+ */
+async function enablePageSite(origin) {
+  if (!origin) return { ok: false, error: 'no_origin' };
+  const id = pageScriptId(origin);
+  try {
+    const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [id] });
+    if (existing.length) await chrome.scripting.unregisterContentScripts({ ids: [id] });
+    await chrome.scripting.registerContentScripts([{
+      id,
+      matches: [`${origin}/*`],
+      js: [PAGE_CONTENT_SCRIPT],
+      runAt: 'document_idle',
+    }]);
+  } catch (err) {
+    return { ok: false, error: String(err?.message || err) };
+  }
+  await setPageSites([...(await getPageSites()), origin]);
+
+  // Show the icon on the page the user is looking at right now, without a reload.
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id && pageOrigin(tab.url) === origin) {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: [PAGE_CONTENT_SCRIPT] });
+    }
+  } catch { /* injection is best-effort */ }
+
+  return { ok: true, origin };
+}
+
+async function disablePageSite(origin) {
+  if (!origin) return { ok: false, error: 'no_origin' };
+  try {
+    await chrome.scripting.unregisterContentScripts({ ids: [pageScriptId(origin)] });
+  } catch { /* not registered */ }
+  await setPageSites((await getPageSites()).filter((o) => o !== origin));
+  return { ok: true, origin };
+}
+
+/**
+ * Reconcile registered scripts with storage after an install/update: an
+ * extension update wipes registered content scripts, but the user's choice
+ * (and the granted permission) should survive.
+ */
+async function restorePageScripts() {
+  const origins = await getPageSites();
+  if (!origins.length) return;
+  let registered = [];
+  try { registered = await chrome.scripting.getRegisteredContentScripts(); } catch { return; }
+  const have = new Set(registered.map((s) => s.id));
+  for (const origin of origins) {
+    if (have.has(pageScriptId(origin))) continue;
+    try {
+      await chrome.scripting.registerContentScripts([{
+        id: pageScriptId(origin),
+        matches: [`${origin}/*`],
+        js: [PAGE_CONTENT_SCRIPT],
+        runAt: 'document_idle',
+      }]);
+    } catch { /* permission may have been revoked outside the extension */ }
   }
 }
 
