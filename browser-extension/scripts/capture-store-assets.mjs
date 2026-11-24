@@ -210,8 +210,8 @@ const shots = [
     frame: {
       chip: 'Connected to your own memory',
       title: 'One memory across <em>every AI</em>',
-      sub: 'Awareness Memory captures each finished answer and gives it back to you in the next chat — on ChatGPT, Doubao, Kimi, DeepSeek and Gemini.',
-      bullets: ['Cloud mode works with no local install', 'Per-site on/off and capture counters', 'Optional local mode: nothing leaves your machine'],
+      sub: 'Awareness Memory captures each finished answer — and saves the page you are reading — into your own private memory.',
+      bullets: ['Cloud mode works with no local install', 'Save any page with one click, or keep the icon on sites you read', 'Optional local mode: nothing leaves your machine'],
       image: b64(path.join(RAW, 'popup.png')),
       imageW: 360,
       imageH: Math.round((popupBox.height / popupBox.width) * 360),
