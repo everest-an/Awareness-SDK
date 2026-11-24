@@ -38,6 +38,10 @@ async function init() {
   try { host = new URL(tab.url).host; } catch { /* non-web tab */ }
   currentSite = siteIdFromHost(host);
   $('site-name').textContent = currentSite ? `${currentSite} (${host})` : `不支持的站点 (${host || 'n/a'})`;
+  // AI-capture controls only make sense on a supported chat site. On any other
+  // page the popup offers page saving instead (F-111).
+  $('binding-card').classList.toggle('hidden', !currentSite);
+  $('record-now').classList.toggle('hidden', !currentSite);
   $('version').textContent = `v${chrome.runtime.getManifest().version}`;
 
   await refreshStatus();
