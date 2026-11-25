@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.1] - 2026-11-25
+
+### Added — opt-out setup telemetry
+
+Successful setup runs now send one anonymous `onboarding_completed` event
+(configured IDE count/scope, local/cloud mode, setup version, platform) to the
+existing F-040 telemetry endpoint. No PII, no project names, no paths. Opt out
+with `--no-telemetry` or `AWARENESS_TELEMETRY=0`; failures are silent and never
+block setup.
+
 ## [0.6.0] - 2026-10-23
 
 ### Added — squad mode

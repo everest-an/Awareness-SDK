@@ -10,6 +10,8 @@ import path from "node:path";
 import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { readSetupVersion, sendSetupCompleted } from "./telemetry.mjs";
+
 import {
   autoDetectAllIdes,
   autoDetectIde,
@@ -464,6 +466,7 @@ Usage:
                                            Provide MCP config values directly (skip auth / cloud mode)
   npx @awareness.market/setup --dry-run       Preview without writing
   npx @awareness.market/setup --force         Allow overwrite for managed files without markers
+npx @awareness.market/setup --no-telemetry  Disable anonymous setup telemetry (env: AWARENESS_TELEMETRY=0)
   npx @awareness.market/setup --squad <n>     Generate squad prompts for 1 lead + n workers (2-8)
   npx @awareness.market/setup --list          Show supported IDEs
   npx @awareness.market/setup --logout        Clear saved credentials
@@ -973,6 +976,15 @@ export async function main(argv = process.argv.slice(2)) {
     }
   }
 
+  if (!hasError && !dryRun) {
+    await sendSetupCompleted({
+      mode: "cloud",
+      ides: ideTargets,
+      version: readSetupVersion(),
+      disabled: argv.includes("--no-telemetry"),
+    });
+  }
+
   return hasError ? 1 : 0;
 }
 
@@ -1085,6 +1097,15 @@ async function runLocalMode({ argv, dryRun, force, ask, isInteractive }) {
     console.log("  → npx @awareness.market/setup --cloud");
     console.log("────────────────────────────────────────");
     // Dashboard auto-open is handled by the local daemon on first run.
+  }
+
+  if (!hasError && !dryRun) {
+    await sendSetupCompleted({
+      mode: "local",
+      ides: ideTargets,
+      version: readSetupVersion(),
+      disabled: argv.includes("--no-telemetry"),
+    });
   }
 
   return hasError ? 1 : 0;
